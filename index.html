@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <div class="top-context" title="Lokasi: SMKN 1 Cilegon (-6.04617, 106.05200)">
+      <div class="top-context" title="Koordinat Gerbang: 6°02'46.9&quot;S 106°03'08.0&quot;E (-6.04636, 106.05222)">
         <span class="school-dot" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 20h18M5 20V8l7-4 7 4v12M9 20v-6h6v6M9 9h.01M15 9h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
@@ -111,7 +111,7 @@
           <div class="map-heading">
             <h2>Denah Kompleks SMKN 1 Cilegon</h2>
             <div class="map-subtitle">
-              <span>Koordinat: -6.04617, 106.05200</span>
+              <span>Gerbang: 6°02'46.9"S 106°03'08.0"E (-6.04636, 106.05222)</span>
               <span aria-hidden="true">·</span>
               <span>Jl. Kedungbaya No.21, Cibeber</span>
             </div>
@@ -148,7 +148,8 @@
               <!-- ALL LABELS LAYER (Toggleable) -->
               <div class="all-labels-wrap" id="allLabelsWrap"></div>
 
-              <!-- TITIK "ANDA DI SINI" (USER LIVE POSITION) -->
+              <!-- TITIK "ANDA DI SINI" (USER LIVE POSITION & ACCURACY CIRCLE) -->
+              <div class="user-accuracy-circle" id="userAccuracyCircle" style="display: none;"></div>
               <div class="user-live-pin" id="userPin" hidden>
                 <div class="user-pulse-wave"></div>
                 <div class="user-core-dot">
@@ -214,6 +215,10 @@
             <div class="route-stat"><strong id="timeValue">—</strong><span>Waktu Tempuh</span></div>
           </div>
           <div class="action-buttons-wrap">
+            <button type="button" class="directions-button" id="toggleDirectionsBtn" style="display: none;" title="Buka Panduan Langkah Arah">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/></svg>
+              <span>Petunjuk Arah</span>
+            </button>
             <button type="button" class="info-button" id="infoButton" style="display: none;" title="Informasi & Fasilitas Ruangan">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Detail Info</span>
@@ -228,6 +233,23 @@
                 <span>Simulasi Jalan</span>
               </button>
             </div>
+          </div>
+        </section>
+
+        <!-- DRAWER / PANEL PANDUAN LANGKAH ARAH (TURN-BY-TURN) -->
+        <section class="directions-drawer" id="directionsDrawer" aria-label="Panduan Arah Langkah demi Langkah">
+          <div class="directions-header">
+            <div class="directions-title-wrap">
+              <span class="directions-header-icon">🧭</span>
+              <div>
+                <h3>Panduan Langkah Arah</h3>
+                <p class="directions-subtitle">Rute resmi koridor aspal & selasar SMKN 1 Cilegon</p>
+              </div>
+            </div>
+            <button type="button" class="close-directions-btn" id="closeDirectionsBtn" aria-label="Tutup panduan arah">✕</button>
+          </div>
+          <div class="directions-list" id="directionsList">
+            <div class="directions-empty">Pilih ruangan tujuan pada daftar atau denah untuk melihat panduan langkah arah.</div>
           </div>
         </section>
       </main>
@@ -341,7 +363,7 @@
 
         <div class="school-info-footer">
           <div><strong>SMK Negeri 1 Cilegon</strong> — Jl. Kedungbaya No.21, Kalitimbang, Kec. Cibeber, Kota Cilegon, Banten</div>
-          <div class="coords-code">Koordinat Resmi: -6.046173455310091, 106.0519980548539</div>
+          <div class="coords-code">Koordinat Gerbang Resmi: 6°02'46.9"S 106°03'08.0"E (-6.046361, 106.052222)</div>
         </div>
       </div>
     </div>

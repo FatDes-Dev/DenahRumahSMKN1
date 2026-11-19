@@ -1,41 +1,226 @@
 /**
  * Voc1Maps - Peta Digital Interaktif SMK Negeri 1 Cilegon
  * Aplikasi panduan navigasi real-time berbasis sekolah.
- * Koordinat SMKN 1 Cilegon: -6.046173455310091, 106.0519980548539
+ * Koordinat Resmi Gerbang Masuk: 6°02'46.9"S 106°03'08.0"E (-6.0463611, 106.0522222)
  */
 
 // ==========================================
-// 1. DATABASE LOKASI & RUANGAN SEKOLAH
+// 1. KOORDINAT RESMI & KALIBRASI SKALA METRIK
 // ==========================================
 const SCHOOL_COORDINATES = {
-  lat: -6.046173455310091,
-  lng: 106.0519980548539
+  lat: -6.0463611,
+  lng: 106.0522222,
+  dms: "6°02'46.9\"S 106°03'08.0\"E"
 };
 
-// Kalibrasi batas geografis SMKN 1 Cilegon untuk proyeksi denah (WGS84 -> Persentase X/Y)
+// Batas wilayah GPS SMKN 1 Cilegon (WGS84 Presisi Kalibrasi Gerbang)
 const GPS_BOUNDS = {
-  north: -6.045000,
-  south: -6.046850,
-  west: 106.051000,
-  east: 106.052400
+  north: -6.044504,
+  south: -6.046941,
+  west:  106.050847,
+  east:  106.052475
 };
 
-const schoolEntrance = { x: 84.5, y: 76.2 }; // Titik Pos Gerbang Utama
+// Kalibrasi faktor skala meter denah SMKN 1 Cilegon:
+// Luas lahan ~21.750 m²; Lebar horizontal ~135 m (rentang 75%) -> 1% X = 1.80 meter
+// Panjang vertikal ~190 m (rentang 70%) -> 1% Y = 2.71 meter
+const SCALE_X = 1.80;
+const SCALE_Y = 2.71;
 
+function metricDistance(p1, p2) {
+  const dx = (p2.x - p1.x) * SCALE_X;
+  const dy = (p2.y - p1.y) * SCALE_Y;
+  return Math.hypot(dx, dy);
+}
+
+// Titik awal default di Pos Gerbang Utama
+const schoolEntrance = { x: 84.5, y: 76.2, name: "Pos Gerbang Utama" };
+
+// ==========================================
+// 2. GRAF KORIDOR JALAN & SELASAR RESMI
+// ==========================================
+const waypoints = {
+  // Gerbang & Jalan Utama Masuk
+  gate: { x: 88.0, y: 76.2, name: "Pintu Masuk Gerbang Utama" },
+  pos: { x: 84.5, y: 76.2, name: "Pos Keamanan / Satpam" },
+  j_taman_barat: { x: 76.0, y: 76.2, name: "Jalan Utama Samping Taman" },
+
+  // Jalan Timur (Depan Blok D)
+  j_blok_d_masuk: { x: 78.5, y: 68.0, name: "Persimpangan Jalan Timur" },
+  j_blok_d_1: { x: 78.5, y: 62.5, name: "Jalan Depan Kelas D1 & D6" },
+  j_blok_d_2: { x: 78.5, y: 58.8, name: "Jalan Depan Kelas D2 & D7" },
+  j_blok_d_3: { x: 78.5, y: 55.0, name: "Jalan Depan Kelas D3 & D8" },
+  j_blok_d_4: { x: 78.5, y: 50.0, name: "Jalan Depan Kelas D4 & R.9" },
+  j_blok_d_5: { x: 78.5, y: 45.0, name: "Ujung Utara Blok D (R.5 & D10)" },
+
+  // Jalan Penghubung Utara (Blok D ke Blok A & Lapangan)
+  j_utara_d_a: { x: 73.0, y: 45.0, name: "Jalan Utara Parkir Guru" },
+  j_utara_a: { x: 64.0, y: 45.0, name: "Jalan Depan Toilet Siswa & OSIS" },
+  j_utara_lapangan: { x: 54.0, y: 45.0, name: "Jalan Antara Lapangan & GSG" },
+  j_utara_lab: { x: 49.0, y: 45.0, name: "Jalan Depan Lab Kimia & Fisika" },
+
+  // Jalan Tengah (R. Kepsek, TU, Blok A Selatan)
+  j_kepsek: { x: 68.0, y: 76.2, name: "Jalan Depan R. Kepsek & Bengkel TGM" },
+  j_kepsek_pintu: { x: 67.5, y: 71.5, name: "Pintu Masuk Ruang Kepala Sekolah" },
+  j_lorong_kepsek: { x: 68.0, y: 66.0, name: "Lorong Masuk R. Kepsek & TU" },
+  j_blok_a_selatan: { x: 64.0, y: 66.0, name: "Selasar Selatan Blok A" },
+  j_blok_a_1: { x: 64.0, y: 61.5, name: "Selasar Depan Kelas A1 & A4" },
+  j_blok_a_2: { x: 64.0, y: 56.5, name: "Selasar Depan Kelas A2 & A5" },
+  j_blok_a_3: { x: 64.0, y: 52.8, name: "Selasar Depan Kelas A3 & A6" },
+  j_blok_a_utara: { x: 64.0, y: 47.5, name: "Selasar Utara Blok A" },
+
+  // Jalan Poros Tengah (PMR, Mesin, Masjid)
+  j_mesin_depan: { x: 58.0, y: 76.2, name: "Jalan Depan Parkir Kepsek & PMR" },
+  j_mesin_tengah: { x: 48.5, y: 76.2, name: "Jalan Depan Bengkel Mesin" },
+  j_masjid_persimpangan: { x: 43.0, y: 76.2, name: "Persimpangan Masjid Al Mizan" },
+
+  // Selasar Selatan Lapangan Upacara (ICT, Sarana, Kesiswaan, Lab Komputer, B5)
+  j_selatan_lapangan_e: { x: 61.0, y: 66.0, name: "Selasar Depan Ruang ICT" },
+  j_selatan_lapangan_m: { x: 54.0, y: 66.0, name: "Selasar Depan Kesiswaan & Sarana" },
+  j_selatan_lapangan_w: { x: 49.0, y: 66.0, name: "Selasar Depan Lab Komputer" },
+  j_blok_b: { x: 43.0, y: 66.0, name: "Selasar Depan Kelas B5 & B2" },
+
+  // Selasar Barat Lapangan Upacara (Ruang Guru, H1)
+  j_barat_lapangan_s: { x: 39.0, y: 66.0, name: "Persimpangan Barat Daya Lapangan" },
+  j_ruang_guru: { x: 39.0, y: 58.0, name: "Selasar Depan Ruang Guru" },
+  j_ruang_h1: { x: 39.0, y: 51.0, name: "Selasar Depan Kelas H1" },
+  j_barat_lapangan_n: { x: 39.0, y: 45.0, name: "Selasar Barat Laut Lapangan" },
+
+  // Kawasan GSG & Bengkel Otomotif
+  j_gsg_selatan: { x: 54.0, y: 42.0, name: "Pintu Depan Gedung Serba Guna (GSG)" },
+  j_lorong_otomotif_s: { x: 60.0, y: 42.0, name: "Jalan Samping GSG & Otomotif" },
+  j_lorong_otomotif_m: { x: 60.0, y: 34.0, name: "Pintu Masuk Bengkel Otomotif" },
+  j_lorong_otomotif_n: { x: 60.0, y: 25.0, name: "Jalan Depan Kelas F1 & F2" },
+
+  // Kawasan Blok F (Utara Sekolah)
+  j_blok_f_utama: { x: 58.0, y: 18.0, name: "Koridor Tengah Blok F (Lantai 2)" },
+  j_blok_f_barat: { x: 48.5, y: 18.0, name: "Koridor Barat Blok F (F5 & F6)" },
+  j_blok_f_timur: { x: 67.5, y: 18.0, name: "Koridor Timur Blok F (F3 & F4)" },
+
+  // Kawasan Blok G & Koperasi (Barat GSG)
+  j_blok_g_masuk: { x: 43.0, y: 42.0, name: "Jalan Masuk Blok G & Koperasi" },
+  j_koperasi: { x: 43.0, y: 36.8, name: "Jalan Depan Koperasi & Kelas G2" },
+  j_blok_g3: { x: 43.0, y: 33.5, name: "Jalan Depan Kelas G3" },
+
+  // Kawasan Gedung COE & Kantin
+  j_coe_masuk: { x: 26.0, y: 66.0, name: "Plaza Gedung COE" },
+  j_kantin_utama: { x: 26.0, y: 62.0, name: "Jalan Depan Kantin Utama" },
+
+  // Kawasan Masjid Al Mizan
+  j_masjid_pintu: { x: 38.0, y: 76.2, name: "Pelataran Masjid Al Mizan" },
+  j_mushola_barat: { x: 25.5, y: 76.2, name: "Jalan Dekat Musholla & Blok P" },
+  j_elektro: { x: 20.0, y: 76.2, name: "Lorong Jurusan Elektro & Kelas K" },
+  j_kantin_barat: { x: 13.0, y: 76.2, name: "Jalan Depan Kantin Barat & Kelas M" },
+
+  // Kawasan Selatan (RPL, TFL, Perpus, Gedung O)
+  j_selatan_persimpangan: { x: 43.0, y: 83.0, name: "Jalur Selatan Sekolah" },
+  j_gedung_o: { x: 48.0, y: 83.0, name: "Akses Gedung O" },
+  j_bengkel_tfl: { x: 36.5, y: 83.0, name: "Akses Bengkel TFL & L3" },
+  j_bengkel_rpl: { x: 32.5, y: 84.0, name: "Akses Bengkel RPL" },
+  j_perpus: { x: 21.0, y: 83.0, name: "Plaza Perpustakaan Sekolah" },
+  j_blok_m_selatan: { x: 12.0, y: 84.0, name: "Akses Kelas M3 & M4" }
+};
+
+// Hubungan jalan (Edges antar koridor)
+const corridorEdges = [
+  // Jalan Masuk
+  ["gate", "pos"],
+  ["pos", "j_taman_barat"],
+
+  // Cabang ke Jalan Timur (Blok D)
+  ["j_taman_barat", "j_blok_d_masuk"],
+  ["j_blok_d_masuk", "j_blok_d_1"],
+  ["j_blok_d_1", "j_blok_d_2"],
+  ["j_blok_d_2", "j_blok_d_3"],
+  ["j_blok_d_3", "j_blok_d_4"],
+  ["j_blok_d_4", "j_blok_d_5"],
+  ["j_blok_d_5", "j_utara_d_a"],
+  ["j_utara_d_a", "j_utara_a"],
+  ["j_utara_a", "j_utara_lapangan"],
+  ["j_utara_lapangan", "j_utara_lab"],
+
+  // Jalan Utama ke Barat (Depan Kepsek, Mesin, Masjid)
+  ["j_taman_barat", "j_kepsek"],
+  ["j_kepsek", "j_kepsek_pintu"],
+  ["j_kepsek_pintu", "j_lorong_kepsek"],
+  ["j_kepsek", "j_lorong_kepsek"],
+  ["j_lorong_kepsek", "j_blok_a_selatan"],
+  ["j_blok_a_selatan", "j_blok_a_1"],
+  ["j_blok_a_1", "j_blok_a_2"],
+  ["j_blok_a_2", "j_blok_a_3"],
+  ["j_blok_a_3", "j_blok_a_utara"],
+  ["j_blok_a_utara", "j_utara_a"],
+
+  ["j_kepsek", "j_mesin_depan"],
+  ["j_mesin_depan", "j_mesin_tengah"],
+  ["j_mesin_tengah", "j_masjid_persimpangan"],
+
+  // Dari persimpangan tengah ke Selasar Selatan Lapangan
+  ["j_lorong_kepsek", "j_selatan_lapangan_e"],
+  ["j_selatan_lapangan_e", "j_selatan_lapangan_m"],
+  ["j_selatan_lapangan_m", "j_selatan_lapangan_w"],
+  ["j_selatan_lapangan_w", "j_blok_b"],
+  ["j_blok_b", "j_barat_lapangan_s"],
+
+  // Hubungan ke Selasar Barat Lapangan
+  ["j_barat_lapangan_s", "j_ruang_guru"],
+  ["j_ruang_guru", "j_ruang_h1"],
+  ["j_ruang_h1", "j_barat_lapangan_n"],
+  ["j_barat_lapangan_n", "j_utara_lab"],
+
+  // Hubungan ke GSG & Otomotif & Blok F
+  ["j_utara_lapangan", "j_gsg_selatan"],
+  ["j_utara_lapangan", "j_lorong_otomotif_s"],
+  ["j_utara_a", "j_lorong_otomotif_s"],
+  ["j_utara_a", "j_gsg_selatan"],
+  ["j_utara_d_a", "j_lorong_otomotif_s"],
+  ["j_lorong_otomotif_s", "j_lorong_otomotif_m"],
+  ["j_lorong_otomotif_m", "j_lorong_otomotif_n"],
+  ["j_lorong_otomotif_n", "j_blok_f_utama"],
+  ["j_blok_f_utama", "j_blok_f_barat"],
+  ["j_blok_f_utama", "j_blok_f_timur"],
+
+  // Hubungan ke Blok G & Koperasi
+  ["j_barat_lapangan_n", "j_blok_g_masuk"],
+  ["j_blok_g_masuk", "j_koperasi"],
+  ["j_koperasi", "j_blok_g3"],
+
+  // Hubungan ke Gedung COE & Kantin
+  ["j_barat_lapangan_s", "j_coe_masuk"],
+  ["j_coe_masuk", "j_kantin_utama"],
+
+  // Hubungan ke Masjid & Sisi Barat
+  ["j_masjid_persimpangan", "j_masjid_pintu"],
+  ["j_masjid_pintu", "j_mushola_barat"],
+  ["j_mushola_barat", "j_elektro"],
+  ["j_elektro", "j_kantin_barat"],
+
+  // Hubungan ke Sisi Selatan (RPL, TFL, Perpus)
+  ["j_masjid_persimpangan", "j_selatan_persimpangan"],
+  ["j_selatan_persimpangan", "j_gedung_o"],
+  ["j_selatan_persimpangan", "j_bengkel_tfl"],
+  ["j_bengkel_tfl", "j_bengkel_rpl"],
+  ["j_bengkel_rpl", "j_perpus"],
+  ["j_perpus", "j_blok_m_selatan"],
+  ["j_perpus", "j_mushola_barat"]
+];
+
+// ==========================================
+// 3. DATABASE RUANGAN LENGKAP
+// ==========================================
 const places = [
-  // --- GERBANG, POS, PARKIR & TAMAN ---
+  // --- GERBANG & FASILITAS DEPAN ---
   {
     id: "pos-gerbang",
     name: "Pos Gerbang Utama",
     aliases: ["pos satpam", "gerbang", "pintu masuk", "security", "pos"],
     category: "Fasilitas",
-    roleCategories: ["Tamu Sekolah", "Murid Baru", "Wali Murid", "Guru & Staff"],
-    block: "Area Masuk",
+    doorNode: "pos",
+    block: "Area Depan",
     floor: "Lantai Dasar",
-    floorColor: "green",
-    detail: "Pintu masuk & pos keamanan utama SMKN 1 Cilegon",
-    description: "Titik akses utama bagi seluruh warga sekolah dan tamu. Pos pemeriksaan keamanan, buku tamu, dan informasi awal lokasi.",
-    facilities: ["Petugas Keamanan 24 Jam", "Buku Tamu Digital", "Informasi Denah", "CCTV"],
+    detail: "Akses utama masuk & pos keamanan sekolah",
+    description: "Titik masuk utama SMKN 1 Cilegon di Jl. Kedungbaya. Pos pemeriksaan keamanan, buku tamu, dan pusat informasi.",
+    facilities: ["Petugas Keamanan 24 Jam", "Buku Tamu Digital", "CCTV", "Papan Informasi"],
     icon: "gate",
     x: 84.5,
     y: 76.2
@@ -43,13 +228,13 @@ const places = [
   {
     id: "taman-utama",
     name: "Taman Sekolah",
-    aliases: ["taman", "taman depan", "area hijau", "taman gerbang"],
+    aliases: ["taman", "taman depan", "area hijau"],
     category: "Fasilitas",
-    roleCategories: ["Tamu Sekolah", "Murid Baru"],
+    doorNode: "j_taman_barat",
     block: "Area Depan",
     floor: "Lantai Dasar",
-    detail: "Area hijau asri depan sekolah",
-    description: "Ruang terbuka hijau di samping gerbang utama yang memberikan udara segar dan suasana nyaman bagi lingkungan sekolah.",
+    detail: "Area hijau asri depan gerbang",
+    description: "Ruang terbuka hijau di samping gerbang utama yang memberikan udara segar bagi lingkungan sekolah.",
     facilities: ["Bangku Taman", "Pepohonan Rindang", "Lampu Penerangan"],
     icon: "field",
     x: 78.5,
@@ -58,14 +243,14 @@ const places = [
   {
     id: "parkir-guru",
     name: "Parkir Guru & Karyawan",
-    aliases: ["parkir guru", "parkir mobil", "parkir motor guru", "parkiran"],
+    aliases: ["parkir guru", "parkiran"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_blok_d_2",
     block: "Samping Blok A",
     floor: "Lantai Dasar",
-    detail: "Area parkir khusus dewan guru dan staf",
-    description: "Kawasan parkir khusus kendaraan roda dua dan roda empat untuk guru, staf tata usaha, dan tamu dinas.",
-    facilities: ["Kanopi Pelindung", "Akses Jalan Utama", "CCTV Keamanan"],
+    detail: "Parkir kendaraan roda 2 & 4 guru dan staf",
+    description: "Kawasan parkir khusus dewan guru, staf TU, dan tamu dinas.",
+    facilities: ["Kanopi Pelindung", "Akses Jalan Utama", "CCTV"],
     icon: "gate",
     x: 73.0,
     y: 56.5
@@ -73,31 +258,31 @@ const places = [
   {
     id: "parkir-kepsek",
     name: "Parkir Kepala Sekolah",
-    aliases: ["parkir kepsek", "parkir pimpinan"],
+    aliases: ["parkir kepsek"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff"],
+    doorNode: "j_mesin_depan",
     block: "Samping R. Kepsek",
     floor: "Lantai Dasar",
-    detail: "Area parkir pimpinan sekolah",
-    description: "Area parkir kendaraan khusus Kepala Sekolah SMKN 1 Cilegon.",
-    facilities: ["Akses Langsung Ruang Kepsek", "Atap Kanopi"],
+    detail: "Area parkir khusus pimpinan sekolah",
+    description: "Area parkir kendaraan dinas Kepala Sekolah SMKN 1 Cilegon.",
+    facilities: ["Kanopi Khusus", "Akses Cepat ke Ruang Kerja"],
     icon: "gate",
     x: 58.0,
     y: 71.0
   },
 
-  // --- KANTOR & PUSAT ADMINISTRASI ---
+  // --- KANTOR & ADMINISTRASI ---
   {
     id: "ruang-kepsek",
     name: "Ruang Kepala Sekolah",
     aliases: ["kepsek", "kepala sekolah", "r. kepsek", "pimpinan"],
     category: "Gedung",
-    roleCategories: ["Tamu Sekolah", "Wali Murid", "Guru & Staff"],
+    doorNode: "j_kepsek_pintu",
     block: "Gedung Utama",
     floor: "Lantai Dasar",
     detail: "Kantor pimpinan SMKN 1 Cilegon",
-    description: "Ruang kerja dan ruang penerimaan tamu resmi pimpinan SMK Negeri 1 Cilegon.",
-    facilities: ["Ruang Tamu Pimpinan", "Pendingin AC", "Meja Rapat Terbatas", "Display Prestasi"],
+    description: "Ruang kerja dan penerimaan tamu dinas resmi Kepala Sekolah.",
+    facilities: ["Ruang Tamu Pimpinan", "Pendingin AC", "Meja Rapat"],
     icon: "people",
     x: 67.5,
     y: 71.0
@@ -105,15 +290,15 @@ const places = [
   {
     id: "ruang-tu",
     name: "Ruang Tata Usaha (TU)",
-    aliases: ["tu", "tata usaha", "administrasi", "r. tu", "bayar spp", "legalisir", "surat"],
+    aliases: ["tu", "tata usaha", "administrasi", "r. tu", "bayar spp", "legalisir"],
     category: "Fasilitas",
-    roleCategories: ["Wali Murid", "Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_lorong_kepsek",
     block: "Gedung Utama",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Layanan administrasi, surat menyurat & kesiswaan",
-    description: "Pusat pelayanan administrasi sekolah, surat keterangan siswa, legalisir ijazah, administrasi PPDB, dan keuangan sekolah.",
-    facilities: ["Loket Pelayanan", "Ruang Tunggu", "Komputer Administrasi", "Arsip Siswa", "Pendingin AC"],
+    detail: "Layanan surat, administrasi siswa & keuangan",
+    description: "Pusat pelayanan administrasi sekolah, surat keterangan, legalisir, dan keuangan siswa.",
+    facilities: ["Loket Pelayanan", "Ruang Tunggu", "Komputer Administrasi", "Pendingin AC"],
     icon: "people",
     x: 68.5,
     y: 66.8
@@ -121,14 +306,14 @@ const places = [
   {
     id: "ruang-guru",
     name: "Ruang Guru",
-    aliases: ["guru", "r. guru", "kantor guru", "dewan guru", "piket"],
+    aliases: ["guru", "r. guru", "kantor guru", "dewan guru"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff", "Murid Baru", "Wali Murid"],
+    doorNode: "j_ruang_guru",
     block: "Gedung Barat",
     floor: "Lantai Dasar",
     detail: "Kantor dewan pendidik SMKN 1 Cilegon",
-    description: "Ruang kerja guru mata pelajaran umum dan kejuruan, konsultasi siswa, serta persiapan materi kegiatan belajar mengajar (KBM).",
-    facilities: ["Meja Kerja Guru", "Ruang Piket", "Loker Guru", "WiFi Sekolah", "Pendingin AC"],
+    description: "Ruang kerja guru mata pelajaran, persiapan KBM, dan konsultasi siswa.",
+    facilities: ["Meja Kerja Guru", "Ruang Piket", "Loker Guru", "WiFi Sekolah", "AC"],
     icon: "people",
     x: 34.8,
     y: 57.8
@@ -136,14 +321,14 @@ const places = [
   {
     id: "ruang-kesiswaan",
     name: "Ruang Kesiswaan",
-    aliases: ["kesiswaan", "wakasek kesiswaan", "r. ksswaan", "tatib", "disiplin"],
+    aliases: ["kesiswaan", "tatib", "r. ksswaan"],
     category: "Fasilitas",
-    roleCategories: ["Wali Murid", "Murid Baru", "Guru & Staff"],
+    doorNode: "j_selatan_lapangan_m",
     block: "Gedung Tengah",
     floor: "Lantai Dasar",
-    detail: "Pembinaan kesiswaan, kedisiplinan & ekstrakurikuler",
-    description: "Kantor pembinaan karakter, tata tertib siswa, izin masuk/keluar, dan koordinasi kegiatan ekstrakurikuler siswa.",
-    facilities: ["Meja Konseling", "Data Pelanggaran & Prestasi", "Ruang Staf Kesiswaan"],
+    detail: "Pembinaan karakter & tata tertib siswa",
+    description: "Kantor pembinaan kesiswaan, penegakan tata tertib, dan izin kegiatan siswa.",
+    facilities: ["Meja Konseling", "Data Siswa", "AC"],
     icon: "people",
     x: 54.2,
     y: 66.0
@@ -151,14 +336,14 @@ const places = [
   {
     id: "ruang-sarana",
     name: "Ruang Sarana & Prasarana",
-    aliases: ["sarana", "sarpras", "logistik", "inventaris"],
+    aliases: ["sarana", "sarpras", "logistik"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff"],
+    doorNode: "j_selatan_lapangan_m",
     block: "Gedung Tengah",
     floor: "Lantai Dasar",
-    detail: "Pengelolaan perlengkapan & fasilitas sekolah",
-    description: "Pusat pengelolaan inventaris, perawatan fasilitas sekolah, peminjaman alat, dan pengadaan sarana pembelajaran.",
-    facilities: ["Gudang Alat", "Sistem Manajemen Inventaris", "Meja Staf Sarpras"],
+    detail: "Pengelolaan inventaris & fasilitas",
+    description: "Pusat logistik, perawatan sarana prasarana sekolah, dan inventaris alat.",
+    facilities: ["Gudang Alat", "Sistem Manajemen Aset"],
     icon: "tools",
     x: 57.5,
     y: 66.0
@@ -166,14 +351,14 @@ const places = [
   {
     id: "ruang-osis",
     name: "Ruang OSIS",
-    aliases: ["osis", "organisasi siswa", "sekretariat osis"],
+    aliases: ["osis", "sekretariat osis"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_utara_a",
     block: "Blok A Utara",
     floor: "Lantai Dasar",
     detail: "Sekretariat OSIS & MPK",
-    description: "Pusat rapat kerja, koordinasi kegiatan kesiswaan, acara sekolah, dan sekretariat pengurus Organisasi Siswa Intra Sekolah.",
-    facilities: ["Meja Kerja Pengurus", "Papan Rencana Kegiatan", "Inventaris Acara"],
+    description: "Pusat kegiatan organisasi siswa, rapat kerja, dan koordinasi acara sekolah.",
+    facilities: ["Meja Rapat Pengurus", "Papan Rencana Kegiatan"],
     icon: "people",
     x: 71.0,
     y: 47.5
@@ -181,14 +366,14 @@ const places = [
   {
     id: "ruang-pmr",
     name: "Ruang PMR / UKS",
-    aliases: ["pmr", "uks", "ruang kesehatan", "pertolongan pertama", "sakit", "obat"],
+    aliases: ["pmr", "uks", "ruang kesehatan", "sakit", "obat"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_mesin_depan",
     block: "Depan Bengkel Mesin",
     floor: "Lantai Dasar",
-    detail: "Unit Kesehatan Sekolah & Palang Merah Remaja",
-    description: "Fasilitas kesehatan darurat siswa dan staf sekolah, pertolongan pertama pada kecelakaan/sakit saat KBM atau upacara.",
-    facilities: ["Tempat Tidur Pasien", "Kotak Obat P3K Lengkap", "Tabung Oksigen", "Timbangan & Pengukur Tinggi"],
+    detail: "Unit Kesehatan Sekolah & Palang Merah",
+    description: "Fasilitas penanganan medis darurat pertama bagi siswa dan staf sekolah.",
+    facilities: ["Tempat Tidur Pasien", "Kotak P3K Lengkap", "Tabung Oksigen", "Timbangan"],
     icon: "people",
     x: 48.5,
     y: 71.0
@@ -200,12 +385,12 @@ const places = [
     name: "Laboratorium Komputer",
     aliases: ["lab kom", "l. kom", "lab komputer", "komputer", "lab pc", "unbk", "anbk", "cbt"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_selatan_lapangan_w",
     block: "Gedung Tengah",
     floor: "Lantai Dasar",
-    detail: "Laboratorium komputer umum & ujian CBT",
-    description: "Lab komputasi multimedia untuk pembelajaran informatika, simulasi kejuruan, ANBK, dan sertifikasi keahlian.",
-    facilities: ["40 Unit Komputer Core i7", "Jaringan LAN Gigabit & Internet Cepat", "AC Sentral", "LCD Proyektor"],
+    detail: "Lab komputer ujian CBT & informatika",
+    description: "Laboratorium komputasi multimedia untuk pembelajaran informatika, simulasi kejuruan, dan ujian CBT.",
+    facilities: ["40 Unit PC Core i7", "LAN Gigabit & Internet Cepat", "AC Sentral", "LCD Proyektor"],
     icon: "computer",
     x: 49.0,
     y: 66.0
@@ -215,12 +400,12 @@ const places = [
     name: "Ruang ICT & Server",
     aliases: ["ict", "ruang server", "jaringan", "noc", "wifi"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff"],
+    doorNode: "j_selatan_lapangan_e",
     block: "Gedung Tengah",
     floor: "Lantai Dasar",
-    detail: "Pusat pengendali jaringan & server SMKN 1 Cilegon",
-    description: "Network Operation Center (NOC) sekolah, router mikrotik, server website sekolah, database nilai, dan manajemen WiFi sekolah.",
-    facilities: ["Rack Server", "UPS Kapasitas Tinggi", "Firewall", "Pemantau CCTV Terpusat"],
+    detail: "Pusat server & infrastruktur jaringan",
+    description: "Network Operation Center (NOC) sekolah, router jaringan, dan server web/database.",
+    facilities: ["Server Rack", "UPS High Capacity", "Firewall", "CCTV Monitor"],
     icon: "computer",
     x: 61.0,
     y: 66.0
@@ -228,14 +413,14 @@ const places = [
   {
     id: "lab-kimia",
     name: "Laboratorium Kimia",
-    aliases: ["lab kimia", "l. kim", "kimia", "reagen", "lab sains"],
+    aliases: ["lab kimia", "l. kim", "kimia"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_utara_lab",
     block: "Blok C",
     floor: "Lantai Dasar",
-    detail: "Praktikum kimia sains & kejuruan",
-    description: "Ruang pengujian dan praktikum reaksi kimia, analisa larutan, dan pengenalan instrumen kimia bersertifikasi K3.",
-    facilities: ["Lemari Asam", "Meja Praktikum Keramik", "Wastafel Kimia", "Shower Darurat", "Peralatan Gelas Lab"],
+    detail: "Praktikum kimia sains & terapan",
+    description: "Ruang eksperimen reaksi kimia, analisa larutan, dan instrumen uji kimia K3.",
+    facilities: ["Lemari Asam", "Meja Praktikum Keramik", "Wastafel Kimia", "Alat Uji Gelas"],
     icon: "tools",
     x: 50.5,
     y: 48.5
@@ -243,14 +428,14 @@ const places = [
   {
     id: "lab-fisika",
     name: "Laboratorium Fisika",
-    aliases: ["lab fisika", "l. fis", "fisika", "alat ukur"],
+    aliases: ["lab fisika", "l. fis", "fisika"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_utara_lab",
     block: "Blok C",
     floor: "Lantai Dasar",
     detail: "Praktikum fisika terapan teknik",
-    description: "Laboratorium pengukuran besaran mekanika, listrik magnet, gelombang optik, dan kalor untuk dasar-dasar teknik.",
-    facilities: ["Kit Praktikum Fisika", "Osiloskop", "Neraca Digital", "Multitester", "Proyektor"],
+    description: "Laboratorium pengukuran besaran mekanika, listrik magnet, dan optika terapan.",
+    facilities: ["Kit Praktikum Fisika", "Osiloskop", "Multimeter Digital", "LCD Proyektor"],
     icon: "tools",
     x: 58.0,
     y: 48.5
@@ -260,13 +445,13 @@ const places = [
   {
     id: "bengkel-otomotif",
     name: "Bengkel Otomotif",
-    aliases: ["otomotif", "tkr", "bengkel mobil", "teknik kendaraan ringan", "bengkel otomotif", "tsm"],
+    aliases: ["otomotif", "tkr", "bengkel mobil", "teknik kendaraan ringan", "tsm"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_lorong_otomotif_m",
     block: "Gedung Otomotif",
     floor: "Lantai Dasar",
-    detail: "Praktik Teknik Kendaraan Ringan & Otomotif",
-    description: "Bengkel modern berstandar industri dengan sarana service kendaraan roda empat, spooring balancing, tune up mesin EFI, dan kelistrikan body.",
+    detail: "Praktik service kendaraan roda empat & motor",
+    description: "Bengkel modern berstandar industri untuk tune-up mesin EFI, spooring balancing, dan kelistrikan mobil.",
     facilities: ["Car Lift 2 Post & 4 Post", "Engine Scanner OBD-II", "Tune Up Tester", "Kompresor Industri"],
     icon: "tools",
     x: 66.2,
@@ -277,12 +462,12 @@ const places = [
     name: "Ruang E1 (Teori Otomotif)",
     aliases: ["e1", "kelas e1", "teori otomotif"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_lorong_otomotif_s",
     block: "Gedung Otomotif",
     floor: "Lantai Dasar",
     detail: "Ruang teori kejuruan otomotif",
-    description: "Ruang pembelajaran teori dan simulasi sistem kelistrikan & mesin otomotif sebelum praktik kerja di bengkel.",
-    facilities: ["Whiteboard", "Proyektor", "Trainer Kelistrikan", "AC"],
+    description: "Ruang pembelajaran teori mesin otomotif sebelum praktik kerja di bengkel.",
+    facilities: ["Whiteboard", "LCD Proyektor", "Trainer Kelistrikan", "AC"],
     icon: "class",
     x: 66.2,
     y: 39.0
@@ -292,12 +477,12 @@ const places = [
     name: "Bengkel Mesin (Pemesinan)",
     aliases: ["bengkel mesin", "mesin bubut", "cnc", "frais", "teknik pemesinan", "bubut"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_mesin_tengah",
     block: "Gedung Mesin",
     floor: "Lantai Dasar",
-    detail: "Praktik bubut, frais, CNC & manufaktur presisi",
-    description: "Sentra manufaktur dan pemesinan dengan puluhan mesin bubut konvensional, mesin frais universal, serta mesin CNC Milling & Turning industri.",
-    facilities: ["16 Unit Mesin Bubut", "6 Unit Mesin Frais", "2 Unit CNC Lathe & Milling", "Alat Ukur Mikrometer & Dial Indicator"],
+    detail: "Praktik bubut konvensional, frais & CNC",
+    description: "Sentra manufaktur dan pemesinan logam dengan mesin bubut, frais universal, dan mesin CNC canggih.",
+    facilities: ["16 Unit Mesin Bubut", "6 Unit Mesin Frais", "2 Unit CNC Lathe & Milling", "Alat Ukur Presisi"],
     icon: "tools",
     x: 48.5,
     y: 76.5
@@ -305,14 +490,14 @@ const places = [
   {
     id: "bengkel-tgm",
     name: "Bengkel TGM (Teknik Gambar Mesin)",
-    aliases: ["tgm", "gambar mesin", "cad", "cam", "desain teknik", "bengkel tgm"],
+    aliases: ["tgm", "gambar mesin", "cad", "cam", "desain teknik"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_kepsek",
     block: "Gedung TGM",
     floor: "Lantai Dasar",
-    detail: "Studio Desain Pemodelan CAD & Manufaktur",
-    description: "Studio perancangan 2D CAD dan 3D Modeling mechanical design dengan software industri seperti AutoCAD, Inventor, dan SolidWorks.",
-    facilities: ["Workstation Komputer CAD", "Plotter Ukuran A0/A1", "Meja Gambar Manual", "3D Printer Prototyping"],
+    detail: "Studio desain CAD & pemodelan 3D",
+    description: "Studio perancangan 2D CAD dan 3D Modeling mechanical design dengan software AutoCAD & SolidWorks.",
+    facilities: ["Workstation Komputer CAD", "Plotter A0/A1", "Meja Gambar Manual", "3D Printer"],
     icon: "tools",
     x: 66.0,
     y: 80.5
@@ -320,14 +505,14 @@ const places = [
   {
     id: "bengkel-rpl",
     name: "Bengkel RPL (Software Engineering)",
-    aliases: ["rpl", "bengkel rpl", "rekayasa perangkat lunak", "coding", "lab rpl", "programmer", "it", "software"],
+    aliases: ["rpl", "bengkel rpl", "rekayasa perangkat lunak", "coding", "lab rpl", "programmer", "software"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_bengkel_rpl",
     block: "Gedung RPL",
     floor: "Lantai Dasar",
-    detail: "Sentra Rekayasa Perangkat Lunak, Web & Mobile Dev",
-    description: "Laboratorium software engineering berkonsep tech startup untuk pembuatan aplikasi web, Android, iOS, Cloud computing, dan AI.",
-    facilities: ["Dual-Monitor Coding Stations", "Internet Fiber Optic Dedicated", "Smart TV Interactive Screen", "AC Dingin"],
+    detail: "Sentra rekayasa perangkat lunak & coding",
+    description: "Laboratorium software engineering berkonsep tech startup untuk pembuatan aplikasi web, mobile, dan AI.",
+    facilities: ["Dual-Monitor Coding Stations", "Dedicated High-Speed Fiber Internet", "Smart TV Screen", "AC"],
     icon: "computer",
     x: 32.5,
     y: 87.2
@@ -335,28 +520,28 @@ const places = [
   {
     id: "bengkel-tfl",
     name: "Bengkel TFL (Fabrikasi Logam & Las)",
-    aliases: ["tfl", "las", "fabrikasi logam", "welding", "bengkel tfl"],
+    aliases: ["tfl", "las", "fabrikasi logam", "welding"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_bengkel_tfl",
     block: "Gedung TFL",
     floor: "Lantai Dasar",
-    detail: "Teknik Fabrikasi Logam & Pengelasan SMAW, GMAW, GTAW",
-    description: "Bengkel pengelasan bersertifikasi industri untuk pengelasan busur listrik, las argon TIG, MIG/MAG, dan pemotongan plasma cutting.",
-    facilities: ["Booth Pengelasan Standar K3", "Mesin Las Inverter Multi-Proses", "Mesin Bending Plat", "Plasma Cutting"],
+    detail: "Teknik pengelasan listrik SMAW, GMAW, GTAW",
+    description: "Bengkel pengelasan bersertifikasi industri untuk las busur listrik, las argon TIG, dan pemotongan plasma.",
+    facilities: ["Booth Pengelasan K3", "Mesin Las Inverter Multi-Proses", "Mesin Bending Plat", "Plasma Cutting"],
     icon: "tools",
     x: 36.5,
     y: 83.0
   },
   {
     id: "gedung-o",
-    name: "Gedung O (Ruang Praktik Kejuruan)",
+    name: "Gedung O (Praktik Kejuruan)",
     aliases: ["gedung o", "blok o", "ruang o"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_gedung_o",
     block: "Blok O",
     floor: "Lantai Dasar",
-    detail: "Ruang pengujian kejuruan & perakitan",
-    description: "Ruang perakitan benda kerja, assembling teknik, dan uji kelayakan produk manufaktur.",
+    detail: "Ruang perakitan & assembling teknik",
+    description: "Ruang perakitan benda kerja teknik dan uji kelayakan produk manufaktur siswa.",
     facilities: ["Meja Kerja Bangku", "Ragum", "Alat Ukur Teknis"],
     icon: "building",
     x: 48.0,
@@ -365,14 +550,14 @@ const places = [
   {
     id: "ruang-l3",
     name: "Ruang L3",
-    aliases: ["l3", "ruang l3", "kelas l3"],
+    aliases: ["l3", "ruang l3"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_bengkel_tfl",
     block: "Blok L",
     floor: "Lantai Dasar",
-    detail: "Ruang teori praktik kejuruan logam & las",
-    description: "Ruang pembekalan materi Keselamatan dan Kesehatan Kerja (K3) serta gambar teknik sambungan las.",
-    facilities: ["Papan Tulis", "Alat Peraga Pengelasan", "Kipas Angin"],
+    detail: "Ruang teori praktik kejuruan logam",
+    description: "Ruang pembekalan materi Keselamatan Kerja (K3) serta gambar teknik sambungan las.",
+    facilities: ["Papan Tulis", "Alat Peraga"],
     icon: "class",
     x: 29.5,
     y: 83.0
@@ -380,59 +565,29 @@ const places = [
   {
     id: "gedung-coe",
     name: "Gedung COE (Center of Excellence)",
-    aliases: ["coe", "gedung coe", "center of excellence", "aula coe", "gedung baru"],
+    aliases: ["coe", "gedung coe", "center of excellence", "aula coe"],
     category: "Gedung",
-    roleCategories: ["Tamu Sekolah", "Murid Baru", "Wali Murid", "Guru & Staff"],
+    doorNode: "j_coe_masuk",
     block: "Gedung COE",
     floor: "Lantai Dasar",
     detail: "Pusat Keunggulan Vokasi & Teaching Factory",
-    description: "Gedung modern bantuan Kemendikbudristek untuk teaching factory terintegrasi, seminar vokasi, dan pameran karya teknologi siswa.",
-    facilities: ["Showroom Produk Siswa", "Studio Multimedia", "Ruang Mini Teater", "AC Sentral", "Akses Disabilitas"],
+    description: "Gedung modern teaching factory terintegrasi, seminar vokasi, dan pameran teknologi siswa.",
+    facilities: ["Showroom Produk Siswa", "Studio Multimedia", "Ruang Mini Teater", "AC Sentral", "Akses Difabel"],
     icon: "building",
     x: 25.5,
     y: 66.0
   },
   {
-    id: "ruang-j1",
-    name: "Ruang J1 (Gedung COE)",
-    aliases: ["j1", "ruang j1", "kelas j1"],
-    category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
-    block: "Gedung COE",
-    floor: "Lantai Dasar",
-    detail: "Ruang pembelajaran multimedia COE",
-    description: "Ruang kelas modern berkonsep collaborative learning dilengkapi proyektor dan audio.",
-    facilities: ["Meja Fleksibel", "Audio System", "Proyektor", "AC"],
-    icon: "class",
-    x: 35.0,
-    y: 66.0
-  },
-  {
-    id: "ruang-j4",
-    name: "Ruang J4 (Gedung COE)",
-    aliases: ["j4", "ruang j4", "kelas j4"],
-    category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
-    block: "Gedung COE",
-    floor: "Lantai Dasar",
-    detail: "Ruang inovasi & inkubasi bisnis siswa",
-    description: "Ruang kerja tim kewirausahaan dan inkubasi startup siswa binaan program Center of Excellence.",
-    facilities: ["Smart Board", "Internet Kecepatan Tinggi", "AC"],
-    icon: "class",
-    x: 16.0,
-    y: 66.0
-  },
-  {
     id: "jurusan-elektro",
     name: "Ruang Jurusan Teknik Elektro",
-    aliases: ["elektro", "jurusan elektro", "titl", "teknik instalasi tenaga listrik"],
+    aliases: ["elektro", "jurusan elektro", "titl", "listrik"],
     category: "Gedung",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_elektro",
     block: "Blok Elektro",
     floor: "Lantai Dasar",
-    detail: "Praktik Instalasi Penerangan & Tenaga Listrik (TITL)",
-    description: "Sentra keahlian teknik elektro, kontrol motor listrik, PLC (Programmable Logic Controller), dan instalasi otomasi industri.",
-    facilities: ["Trainer PLC Omron/Siemens", "Papan Praktik Instalasi Bangunan", "Osiloskop Listrik"],
+    detail: "Instalasi Tenaga Listrik & Kontrol Motor",
+    description: "Sentra keahlian teknik elektro, kontrol motor listrik, PLC, dan otomasi industri.",
+    facilities: ["Trainer PLC Industri", "Papan Praktik Instalasi Bangunan", "Osiloskop Listrik"],
     icon: "tools",
     x: 18.5,
     y: 70.8
@@ -442,14 +597,14 @@ const places = [
   {
     id: "kelas-a1",
     name: "Kelas A1",
-    aliases: ["a1", "kelas a1", "10 mesin 1", "x mesin 1", "10 ipa 1"],
+    aliases: ["a1", "kelas a1", "10 mesin 1", "x mesin 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_1",
     block: "Blok A",
     floor: "Lantai Dasar",
     detail: "Blok A · lantai dasar",
-    description: "Ruang kelas reguler lantai dasar yang menghadap langsung ke arah lapangan upacara dengan sirkulasi udara baik.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    description: "Ruang kelas reguler lantai dasar menghadap lapangan upacara.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor", "Kipas Angin"],
     icon: "class",
     x: 66.5,
     y: 61.5
@@ -457,14 +612,14 @@ const places = [
   {
     id: "kelas-a2",
     name: "Kelas A2",
-    aliases: ["a2", "kelas a2", "10 mesin 2", "x mesin 2", "10 ipa 2", "kelas 10 ipa 2"],
+    aliases: ["a2", "kelas a2", "10 ipa 2", "kelas 10 ipa 2", "10 mesin 2", "x mesin 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_2",
     block: "Blok A",
     floor: "Lantai Dasar",
     detail: "Blok A · lantai dasar (Kelas 10 IPA 2)",
-    description: "Ruang kelas reguler di sayap tengah Blok A dengan pencahayaan alami optimal.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    description: "Ruang kelas nyaman dengan ventilasi terbuka di sayap tengah Blok A.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor", "Kipas Angin"],
     icon: "class",
     x: 66.5,
     y: 56.5
@@ -472,14 +627,14 @@ const places = [
   {
     id: "kelas-a3",
     name: "Kelas A3",
-    aliases: ["a3", "kelas a3", "10 otomotif 1", "x otomotif 1", "10 ipa 3"],
+    aliases: ["a3", "kelas a3", "10 otomotif 1", "x otomotif 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_3",
     block: "Blok A",
     floor: "Lantai Dasar",
     detail: "Blok A · lantai dasar",
-    description: "Ruang kelas reguler dekat akses tangga penghubung lantai atas Blok A.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    description: "Ruang kelas reguler dekat tangga penghubung lantai 2 Blok A.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor"],
     icon: "class",
     x: 66.5,
     y: 52.8
@@ -489,13 +644,13 @@ const places = [
     name: "Kelas A4",
     aliases: ["a4", "kelas a4", "11 mesin 1", "xi mesin 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_1",
     block: "Blok A",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok A · lantai atas (Lantai 2)",
-    description: "Ruang kelas lantai 2 dengan pemandangan terbuka menghadap lapangan upacara sekolah.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    detail: "Blok A · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 menghadap lapangan upacara.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor"],
     icon: "class",
     x: 69.0,
     y: 60.0
@@ -505,13 +660,13 @@ const places = [
     name: "Kelas A5",
     aliases: ["a5", "kelas a5", "11 mesin 2", "xi mesin 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_2",
     block: "Blok A",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok A · lantai atas (Lantai 2)",
-    description: "Ruang kelas lantai 2 dengan suasana belajar yang tenang dan nyaman.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    detail: "Blok A · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 sayap tengah Blok A.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor"],
     icon: "class",
     x: 69.0,
     y: 55.0
@@ -521,13 +676,13 @@ const places = [
     name: "Kelas A6",
     aliases: ["a6", "kelas a6", "11 otomotif 1", "xi otomotif 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_a_3",
     block: "Blok A",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok A · lantai atas (Lantai 2)",
-    description: "Ruang kelas lantai 2 ujung utara Blok A dekat akses toilet siswa.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor", "Kipas Angin"],
+    detail: "Blok A · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 ujung utara Blok A.",
+    facilities: ["36 Meja Kursi Siswa", "Whiteboard", "LCD Proyektor"],
     icon: "class",
     x: 69.0,
     y: 50.8
@@ -537,13 +692,13 @@ const places = [
   {
     id: "kelas-b5",
     name: "Kelas B5",
-    aliases: ["b5", "kelas b5", "10 elektro 1", "x elektro 1"],
+    aliases: ["b5", "kelas b5", "10 elektro 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_b",
     block: "Blok B",
     floor: "Lantai Dasar",
     detail: "Blok B · lantai dasar",
-    description: "Ruang kelas di sayap selatan lapangan upacara dekat laboratorium komputer.",
+    description: "Ruang kelas di sayap selatan lapangan upacara dekat lab komputer.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 42.8,
@@ -552,14 +707,14 @@ const places = [
   {
     id: "kelas-b2",
     name: "Kelas B2",
-    aliases: ["b2", "kelas b2", "11 elektro 1", "xi elektro 1"],
+    aliases: ["b2", "kelas b2", "11 elektro 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_b",
     block: "Blok B",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok B · lantai atas (Lantai 2)",
-    description: "Ruang kelas lantai atas Blok B di atas ruang B5 dengan sudut pandang strategis.",
+    detail: "Blok B · lantai 2 (atas)",
+    description: "Ruang kelas lantai atas Blok B di atas ruang B5.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 42.8,
@@ -570,14 +725,14 @@ const places = [
   {
     id: "kelas-c4",
     name: "Kelas C4",
-    aliases: ["c4", "kelas c4", "12 kimia", "xii kimia"],
+    aliases: ["c4", "kelas c4", "12 kimia"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_utara_lab",
     block: "Blok C",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok C · lantai atas (atas Lab Kimia)",
-    description: "Ruang kelas lantai atas Blok C di utara lapangan upacara.",
+    detail: "Blok C · lantai 2 (atas Lab Kimia)",
+    description: "Ruang kelas lantai atas di utara lapangan upacara.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 50.5,
@@ -586,13 +741,13 @@ const places = [
   {
     id: "kelas-c3",
     name: "Kelas C3",
-    aliases: ["c3", "kelas c3", "12 fisika", "xii fisika"],
+    aliases: ["c3", "kelas c3", "12 fisika"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_utara_lab",
     block: "Blok C",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok C · lantai atas (atas Lab Fisika)",
+    detail: "Blok C · lantai 2 (atas Lab Fisika)",
     description: "Ruang kelas lantai atas Blok C sisi timur.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
@@ -606,11 +761,11 @@ const places = [
     name: "Kelas D1",
     aliases: ["d1", "kelas d1", "10 rpl 1", "x rpl 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_1",
     block: "Blok D",
     floor: "Lantai Dasar",
     detail: "Blok D · lantai dasar",
-    description: "Ruang kelas di koridor timur sekolah dekat area taman dan gerbang.",
+    description: "Ruang kelas di koridor timur sekolah dekat area gerbang.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 81.5,
@@ -621,7 +776,7 @@ const places = [
     name: "Kelas D2",
     aliases: ["d2", "kelas d2", "10 rpl 2", "x rpl 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_2",
     block: "Blok D",
     floor: "Lantai Dasar",
     detail: "Blok D · lantai dasar",
@@ -636,7 +791,7 @@ const places = [
     name: "Kelas D3",
     aliases: ["d3", "kelas d3", "10 tkj 1", "x tkj 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_3",
     block: "Blok D",
     floor: "Lantai Dasar",
     detail: "Blok D · lantai dasar",
@@ -651,7 +806,7 @@ const places = [
     name: "Kelas D4",
     aliases: ["d4", "kelas d4", "10 tkj 2", "x tkj 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_4",
     block: "Blok D",
     floor: "Lantai Dasar",
     detail: "Blok D · lantai dasar",
@@ -666,11 +821,11 @@ const places = [
     name: "Ruang R.5",
     aliases: ["r5", "r.5", "ruang r5"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_5",
     block: "Blok D",
     floor: "Lantai Dasar",
-    detail: "Blok D · lantai dasar",
-    description: "Ruang kelas pembelajaran umum di ujung utara Blok D.",
+    detail: "Blok D · ujung utara dasar",
+    description: "Ruang kelas pembelajaran di ujung utara Blok D.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
     x: 81.5,
@@ -681,12 +836,12 @@ const places = [
     name: "Kelas D6",
     aliases: ["d6", "kelas d6", "11 rpl 1", "xi rpl 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_1",
     block: "Blok D",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok D · lantai atas (Lantai 2)",
-    description: "Ruang kelas di lantai 2 Blok D menghadap area parkir dan lapangan.",
+    detail: "Blok D · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 di atas ruang D1.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 83.5,
@@ -697,12 +852,12 @@ const places = [
     name: "Kelas D7",
     aliases: ["d7", "kelas d7", "11 rpl 2", "xi rpl 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_2",
     block: "Blok D",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok D · lantai atas (Lantai 2)",
-    description: "Ruang kelas di lantai 2 Blok D.",
+    detail: "Blok D · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 di atas ruang D2.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 83.5,
@@ -713,12 +868,12 @@ const places = [
     name: "Kelas D8",
     aliases: ["d8", "kelas d8", "11 tkj 1", "xi tkj 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_3",
     block: "Blok D",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok D · lantai atas (Lantai 2)",
-    description: "Ruang kelas di lantai 2 Blok D.",
+    detail: "Blok D · lantai 2 (atas)",
+    description: "Ruang kelas lantai 2 di atas ruang D3.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 83.5,
@@ -729,12 +884,12 @@ const places = [
     name: "Ruang R.9",
     aliases: ["r9", "r.9", "ruang r9"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_4",
     block: "Blok D",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok D · lantai atas (Lantai 2)",
-    description: "Ruang kelas pembelajaran di lantai atas sayap utara Blok D.",
+    detail: "Blok D · lantai 2 (atas)",
+    description: "Ruang kelas pembelajaran di lantai 2 Blok D.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
     x: 83.5,
@@ -745,12 +900,12 @@ const places = [
     name: "Kelas D10",
     aliases: ["d10", "kelas d10", "11 tkj 2", "xi tkj 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_d_5",
     block: "Blok D",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok D · lantai atas (Lantai 2)",
-    description: "Ruang kelas paling utara di lantai 2 Blok D.",
+    detail: "Blok D · lantai 2 (atas)",
+    description: "Ruang kelas paling utara lantai 2 Blok D.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 83.5,
@@ -761,9 +916,9 @@ const places = [
   {
     id: "kelas-f1",
     name: "Kelas F1",
-    aliases: ["f1", "kelas f1", "10 logam 1", "x logam 1"],
+    aliases: ["f1", "kelas f1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_lorong_otomotif_n",
     block: "Blok F",
     floor: "Lantai Dasar",
     detail: "Blok F · lantai dasar",
@@ -776,9 +931,9 @@ const places = [
   {
     id: "kelas-f2",
     name: "Kelas F2",
-    aliases: ["f2", "kelas f2", "10 logam 2", "x logam 2"],
+    aliases: ["f2", "kelas f2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_lorong_otomotif_n",
     block: "Blok F",
     floor: "Lantai Dasar",
     detail: "Blok F · lantai dasar",
@@ -791,14 +946,14 @@ const places = [
   {
     id: "kelas-f3",
     name: "Kelas F3",
-    aliases: ["f3", "kelas f3", "12 rpl 1", "xii rpl 1"],
+    aliases: ["f3", "kelas f3", "12 rpl 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_f_timur",
     block: "Blok F",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok F · lantai atas (paling utara)",
-    description: "Ruang kelas lantai atas deret horizontal paling utara sekolah.",
+    detail: "Blok F · lantai 2 paling utara",
+    description: "Ruang kelas lantai 2 deret utara sekolah.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 67.5,
@@ -807,14 +962,14 @@ const places = [
   {
     id: "kelas-f4",
     name: "Kelas F4",
-    aliases: ["f4", "kelas f4", "12 rpl 2", "xii rpl 2"],
+    aliases: ["f4", "kelas f4", "12 rpl 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_f_utama",
     block: "Blok F",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok F · lantai atas (paling utara)",
-    description: "Ruang kelas lantai atas deret horizontal paling utara sekolah.",
+    detail: "Blok F · lantai 2 paling utara",
+    description: "Ruang kelas lantai 2 deret utara sekolah.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 62.0,
@@ -823,14 +978,14 @@ const places = [
   {
     id: "kelas-f5",
     name: "Kelas F5",
-    aliases: ["f5", "kelas f5", "12 tkj 1", "xii tkj 1"],
+    aliases: ["f5", "kelas f5", "12 tkj 1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_f_utama",
     block: "Blok F",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok F · lantai atas (paling utara)",
-    description: "Ruang kelas lantai atas deret horizontal paling utara sekolah.",
+    detail: "Blok F · lantai 2 paling utara",
+    description: "Ruang kelas lantai 2 deret utara sekolah.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 54.5,
@@ -839,14 +994,14 @@ const places = [
   {
     id: "kelas-f6",
     name: "Kelas F6",
-    aliases: ["f6", "kelas f6", "12 tkj 2", "xii tkj 2"],
+    aliases: ["f6", "kelas f6", "12 tkj 2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_f_barat",
     block: "Blok F",
     floor: "Lantai Atas",
     floorColor: "blue",
-    detail: "Blok F · lantai atas (ujung barat)",
-    description: "Ruang kelas lantai atas ujung barat Blok F.",
+    detail: "Blok F · lantai 2 paling utara",
+    description: "Ruang kelas lantai 2 ujung barat Blok F.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard", "Proyektor"],
     icon: "class",
     x: 48.5,
@@ -859,7 +1014,7 @@ const places = [
     name: "Kelas G1",
     aliases: ["g1", "kelas g1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_g_masuk",
     block: "Blok G",
     floor: "Lantai Dasar",
     detail: "Blok G · samping barat GSG",
@@ -874,10 +1029,10 @@ const places = [
     name: "Kelas G2",
     aliases: ["g2", "kelas g2"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_koperasi",
     block: "Blok G",
     floor: "Lantai Dasar",
-    detail: "Blok G · samping barat GSG",
+    detail: "Blok G · dekat Koperasi",
     description: "Ruang kelas di koridor barat gedung serbaguna dekat koperasi.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
@@ -889,10 +1044,10 @@ const places = [
     name: "Kelas G3",
     aliases: ["g3", "kelas g3"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_blok_g3",
     block: "Blok G",
     floor: "Lantai Dasar",
-    detail: "Blok G · samping barat GSG",
+    detail: "Blok G · ujung barat GSG",
     description: "Ruang kelas di koridor barat gedung serbaguna.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
@@ -904,10 +1059,10 @@ const places = [
     name: "Kelas H1",
     aliases: ["h1", "kelas h1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_ruang_h1",
     block: "Blok H",
     floor: "Lantai Dasar",
-    detail: "Blok H · dekat Ruang Guru",
+    detail: "Blok H · barat lapangan",
     description: "Ruang kelas berhadapan langsung dengan lapangan upacara sisi barat.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
@@ -919,30 +1074,15 @@ const places = [
     name: "Kelas K1",
     aliases: ["k1", "kelas k1"],
     category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_elektro",
     block: "Blok K",
     floor: "Lantai Dasar",
-    detail: "Blok K · lorong jurusan elektro",
+    detail: "Blok K · lorong elektro",
     description: "Ruang kelas di lorong jurusan elektro dekat Masjid Al Mizan.",
     facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
     icon: "class",
     x: 18.5,
     y: 73.2
-  },
-  {
-    id: "kelas-k4",
-    name: "Kelas K4",
-    aliases: ["k4", "kelas k4"],
-    category: "Ruang kelas",
-    roleCategories: ["Murid Baru"],
-    block: "Blok K",
-    floor: "Lantai Dasar",
-    detail: "Blok K · lorong jurusan elektro",
-    description: "Ruang kelas di lorong jurusan elektro.",
-    facilities: ["36 Meja Kursi Siswa", "Whiteboard"],
-    icon: "class",
-    x: 18.5,
-    y: 80.4
   },
 
   // --- FASILITAS UMUM, IBADAH, KANTIN & OLAHRAGA ---
@@ -951,27 +1091,25 @@ const places = [
     name: "Masjid Al Mizan",
     aliases: ["masjid", "masjid al mizan", "sholat", "tempat ibadah", "jumatan", "rohis"],
     category: "Fasilitas",
-    roleCategories: ["Tamu Sekolah", "Murid Baru", "Wali Murid", "Guru & Staff"],
+    doorNode: "j_masjid_pintu",
     block: "Kawasan Masjid",
     floor: "Lantai Dasar",
-    landmark: "large",
     detail: "Masjid utama SMKN 1 Cilegon",
-    description: "Pusat ibadah sholat berjamaah, sholat Jumat warga sekolah, kajian rohis, dan pembinaan karakter keagamaan.",
-    facilities: ["Tempat Wudhu Luas Pria & Wanita", "Kapasitas 800 Jamaah", "Sound System Masjid", "Karpet Lembut & Kipas Angin"],
+    description: "Pusat ibadah sholat berjamaah, sholat Jumat warga sekolah, dan kajian rohis.",
+    facilities: ["Tempat Wudhu Luas Pria & Wanita", "Kapasitas 800 Jamaah", "Sound System"],
     icon: "mosque",
     x: 34.5,
     y: 75.0
   },
   {
     id: "mushola-barat",
-    name: "Musholla",
-    aliases: ["mushola", "musholla", "surau", "mushola barat"],
+    name: "Musholla Barat",
+    aliases: ["mushola", "musholla", "surau"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_mushola_barat",
     block: "Dekat Blok P",
     floor: "Lantai Dasar",
-    landmark: "small",
-    detail: "Musholla transit sholat warga sekolah",
+    detail: "Musholla pendukung sayap barat",
     description: "Fasilitas tempat sholat pendukung yang nyaman di samping area Masjid Al Mizan.",
     facilities: ["Tempat Wudhu", "Sajadah", "Mukena"],
     icon: "mosque",
@@ -981,14 +1119,14 @@ const places = [
   {
     id: "perpustakaan",
     name: "Perpustakaan (Perpus)",
-    aliases: ["perpus", "perpustakaan", "baca", "buku", "literasi", "pinjam buku"],
+    aliases: ["perpus", "perpustakaan", "baca", "buku", "literasi"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff"],
+    doorNode: "j_perpus",
     block: "Gedung Perpus",
     floor: "Lantai Dasar",
-    detail: "Pusat Sumber Belajar & Literasi Digital",
-    description: "Perpustakaan ber-AC lengkap dengan ribuan koleksi buku teks pelajaran, referensi kejuruan, e-library, dan area membaca santai.",
-    facilities: ["Koleksi 5.000+ Judul Buku", "Area Baca Lesehan & Meja Studi", "Komputer E-Library", "Pendingin AC", "WiFi Akses Cepat"],
+    detail: "Pusat literasi & perpustakaan digital",
+    description: "Perpustakaan ber-AC lengkap dengan ribuan koleksi buku teks pelajaran, fiksi, dan e-library.",
+    facilities: ["5.000+ Koleksi Buku", "Area Baca Lesehan", "Komputer E-Library", "AC"],
     icon: "book",
     x: 20.8,
     y: 84.0
@@ -996,14 +1134,14 @@ const places = [
   {
     id: "kantin-utama",
     name: "Kantin Sekolah",
-    aliases: ["kantin", "makan", "minum", "jajan", "kantin tengah", "kantin coe"],
+    aliases: ["kantin", "makan", "minum", "jajan", "kantin coe"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah"],
+    doorNode: "j_kantin_utama",
     block: "Utara Gedung COE",
     floor: "Lantai Dasar",
-    detail: "Pusat kuliner sehat dan higienis sekolah",
-    description: "Kantin sekolah dengan aneka stand makanan berat, jajanan sehat, minuman segar, serta area meja makan bersama siswa dan guru.",
-    facilities: ["10 Stand Makanan & Minuman", "Meja Makan Luas", "Wastafel Cuci Tangan", "Pembayaran Tunai & QRIS"],
+    detail: "Pusat kuliner sehat sekolah",
+    description: "Kantin sekolah dengan 10 stand makanan higienis, minuman segar, dan meja makan luas.",
+    facilities: ["10 Stand Makanan & Minuman", "Meja Makan Luas", "Wastafel", "Pembayaran QRIS"],
     icon: "food",
     x: 20.5,
     y: 62.0
@@ -1011,14 +1149,14 @@ const places = [
   {
     id: "kantin-barat",
     name: "Kantin Barat",
-    aliases: ["kantin barat", "kantin belakang"],
+    aliases: ["kantin barat"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_kantin_barat",
     block: "Sayap Barat",
     floor: "Lantai Dasar",
     detail: "Kantin penunjang sayap barat",
-    description: "Stand jajanan cepat saji dan minuman dekat area bengkel dan kejuruan.",
-    facilities: ["Stand Minuman & Snack", "Tempat Duduk Santai"],
+    description: "Stand jajanan dan minuman cepat saji dekat area kejuruan.",
+    facilities: ["Stand Snack & Minuman", "Area Duduk"],
     icon: "food",
     x: 12.8,
     y: 74.0
@@ -1026,14 +1164,14 @@ const places = [
   {
     id: "koperasi-siswa",
     name: "Koperasi Sekolah",
-    aliases: ["koperasi", "kopsis", "beli seragam", "alat tulis", "atk", "fotocopy"],
+    aliases: ["koperasi", "kopsis", "seragam", "atk", "fotocopy"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Wali Murid", "Guru & Staff"],
+    doorNode: "j_koperasi",
     block: "Blok G",
     floor: "Lantai Dasar",
-    detail: "Penyedia seragam, ATK & perlengkapan sekolah",
-    description: "Toko perlengkapan sekolah siswa yang menyediakan seragam resmi, badge, jas praktik, alat tulis kejuruan, buku tugas, dan fotokopi.",
-    facilities: ["Perlengkapan Seragam Lengkap", "ATK Murah", "Layanan Fotokopi & Cetak", "Pembayaran QRIS"],
+    detail: "Penyedia seragam, ATK & fotokopi",
+    description: "Toko perlengkapan sekolah siswa yang menyediakan seragam, jas praktik, buku, dan fotokopi.",
+    facilities: ["Seragam Resmi", "ATK Murah", "Layanan Fotokopi"],
     icon: "food",
     x: 39.2,
     y: 36.8
@@ -1041,14 +1179,14 @@ const places = [
   {
     id: "lapangan-upacara",
     name: "Lapangan Upacara & Olahraga",
-    aliases: ["lapangan", "lapangan upacara", "upacara", "olahraga", "futsal", "basket", "senam"],
+    aliases: ["lapangan", "lapangan upacara", "upacara", "olahraga", "futsal", "basket"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Guru & Staff", "Tamu Sekolah", "Wali Murid"],
+    doorNode: "j_selatan_lapangan_m",
     block: "Pusat Sekolah",
     floor: "Lantai Dasar",
-    detail: "Pusat upacara bendera, apel & kegiatan olahraga",
-    description: "Lapangan serbaguna outdoor berukuran luas di tengah-tengah kampus untuk upacara Senin, peringatan hari besar, senam, dan olahraga basket/futsal.",
-    facilities: ["Tiang Bendera Resmi", "Ring Basket Standar", "Garis Lapangan Futsal/Voli", "Pencahayaan Sorot Lapangan"],
+    detail: "Pusat upacara bendera & olahraga",
+    description: "Lapangan outdoor luas di pusat kampus untuk upacara Senin, apel, dan olahraga basket/futsal.",
+    facilities: ["Tiang Bendera Resmi", "Ring Basket Standar", "Garis Lapangan Futsal"],
     icon: "field",
     x: 51.5,
     y: 57.5
@@ -1056,14 +1194,14 @@ const places = [
   {
     id: "gedung-serba-guna",
     name: "Gedung Serba Guna (GSG)",
-    aliases: ["gsg", "gedung serba guna", "aula", "auditorium", "wisuda", "pertemuan", "rapat"],
+    aliases: ["gsg", "gedung serba guna", "aula", "auditorium", "wisuda", "rapat"],
     category: "Gedung",
-    roleCategories: ["Tamu Sekolah", "Wali Murid", "Guru & Staff", "Murid Baru"],
+    doorNode: "j_gsg_selatan",
     block: "Gedung GSG",
     floor: "Lantai Dasar",
-    detail: "Aula utama pertemuan akbar & pentas seni",
-    description: "Gedung auditorium indoor berkapasitas 1.500 orang untuk wisuda kelulusan, rapat wali murid, pameran bursa kerja (Job Fair), dan pentas seni.",
-    facilities: ["Panggung Utama Luas", "Sound System Line Array", "Lighting Panggung", "Kapasitas 1.500 Kursi", "Tribun Penonton"],
+    detail: "Aula utama pertemuan akbar & wisuda",
+    description: "Auditorium indoor berkapasitas 1.500 orang untuk wisuda, rapat wali murid, dan pentas seni.",
+    facilities: ["Panggung Utama", "Sound System Line Array", "Kapasitas 1.500 Kursi"],
     icon: "building",
     x: 50.8,
     y: 37.0
@@ -1071,14 +1209,14 @@ const places = [
   {
     id: "toilet-siswa",
     name: "Toilet Siswa (Dekat Lapangan)",
-    aliases: ["toilet", "wc", "kamar mandi", "toilet siswa", "toilet cowok", "toilet cewek"],
+    aliases: ["toilet", "wc", "kamar mandi", "toilet siswa"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru", "Tamu Sekolah"],
+    doorNode: "j_utara_a",
     block: "Utara Blok A",
     floor: "Lantai Dasar",
-    detail: "Fasilitas sanitasi siswa dekat lapangan upacara",
-    description: "Kamar mandi dan toilet terpisah untuk siswa pria dan wanita yang senantiasa bersih dan higienis.",
-    facilities: ["Kamar Mandi Terpisah Pria/Wanita", "Kloset Bersih", "Wastafel & Cermin", "Air Bersih Mengalir"],
+    detail: "Sanitasi siswa dekat lapangan upacara",
+    description: "Kamar mandi dan toilet terpisah untuk siswa pria dan wanita.",
+    facilities: ["Toilet Terpisah Pria/Wanita", "Kloset Bersih", "Wastafel", "Air Bersih"],
     icon: "restroom",
     x: 66.5,
     y: 47.5
@@ -1086,13 +1224,13 @@ const places = [
   {
     id: "toilet-umum",
     name: "Toilet Guru & Tamu (Blok A)",
-    aliases: ["toilet guru", "wc guru", "toilet tamu", "toilet"],
+    aliases: ["toilet guru", "wc guru", "toilet tamu"],
     category: "Fasilitas",
-    roleCategories: ["Guru & Staff", "Tamu Sekolah", "Wali Murid"],
+    doorNode: "j_blok_a_selatan",
     block: "Selatan Blok A",
     floor: "Lantai Dasar",
     detail: "Toilet guru, staf dan tamu sekolah",
-    description: "Fasilitas toilet yang terawat di dekat ruang tata usaha dan ruang dewan guru.",
+    description: "Fasilitas toilet terawat dekat ruang tata usaha dan ruang dewan guru.",
     facilities: ["Kloset Duduk & Jongkok", "Wastafel", "Sabun Cuci Tangan"],
     icon: "restroom",
     x: 67.5,
@@ -1101,13 +1239,13 @@ const places = [
   {
     id: "toilet-perpus",
     name: "Toilet Siswa (Dekat Perpus)",
-    aliases: ["wc perpus", "toilet perpus", "toilet belakang"],
+    aliases: ["wc perpus", "toilet perpus"],
     category: "Fasilitas",
-    roleCategories: ["Murid Baru"],
+    doorNode: "j_perpus",
     block: "Dekat Perpus",
     floor: "Lantai Dasar",
-    detail: "Toilet siswa sayap selatan dekat perpustakaan",
-    description: "Fasilitas sanitasi pendukung di kawasan selatan sekolah dekat perpustakaan dan bengkel RPL.",
+    detail: "Toilet pendukung sayap selatan",
+    description: "Fasilitas sanitasi pendukung di kawasan selatan sekolah dekat perpustakaan.",
     facilities: ["Air Bersih", "Kloset Bersih"],
     icon: "restroom",
     x: 20.0,
@@ -1115,7 +1253,7 @@ const places = [
   }
 ];
 
-// SVG Icon dictionary
+// SVG Icons
 const icons = {
   book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21V5.5Zm0 0V19m4-12h8m-8 4h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
   mosque: '<path d="M3 20h18M5 20v-7h14v7M8 13V9l4-3 4 3v4m-4-7V3m-2 17v-4h4v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -1134,121 +1272,7 @@ function iconMarkup(key, size = 18) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">${icons[key] || icons.building}</svg>`;
 }
 
-// ==========================================
-// 2. GRAF JALUR JALAN & ROUTING (DIJKSTRA)
-// ==========================================
-// Node persimpangan jalan & selasar denah SMKN 1 Cilegon
-const waypoints = {
-  gate: { x: 88.0, y: 76.2 },
-  pos: { x: 84.5, y: 76.2 },
-  j_taman_n: { x: 77.0, y: 76.2 },
-  j_taman_s: { x: 74.0, y: 83.0 },
-  j_tgm: { x: 66.0, y: 76.2 },
-
-  // Blok D & Jalur Timur
-  j_blok_d_s: { x: 78.0, y: 72.0 },
-  j_blok_d_m: { x: 78.0, y: 56.0 },
-  j_blok_d_n: { x: 78.0, y: 46.0 },
-  j_blok_d_far: { x: 78.0, y: 43.8 },
-
-  // Parkir Guru & Blok A
-  j_parkir_guru: { x: 73.0, y: 64.0 },
-  j_blok_a_s: { x: 64.0, y: 64.0 },
-  j_blok_a_m: { x: 64.0, y: 56.0 },
-  j_blok_a_n: { x: 64.0, y: 47.0 },
-
-  // Area Kantor & Bengkel Mesin
-  j_kepsek: { x: 64.0, y: 73.0 },
-  j_mesin_e: { x: 54.0, y: 76.2 },
-  j_pmr: { x: 54.0, y: 71.0 },
-  j_mesin_w: { x: 44.0, y: 76.2 },
-
-  // Jalur Tengah & Lapangan Upacara
-  j_tengah_s: { x: 51.0, y: 66.0 },
-  j_lapangan_c: { x: 51.5, y: 57.5 },
-  j_tengah_n: { x: 51.0, y: 46.0 },
-  j_lapangan_w: { x: 39.0, y: 57.0 },
-  j_lapangan_sw: { x: 39.0, y: 66.0 },
-
-  // Jalur Utara (GSG & Otomotif & Blok F)
-  j_gsg_e: { x: 58.0, y: 45.0 },
-  j_otomotif: { x: 58.0, y: 35.0 },
-  j_gsg_w: { x: 43.0, y: 45.0 },
-  j_blok_g: { x: 43.0, y: 36.0 },
-  j_blok_f_s: { x: 58.0, y: 24.0 },
-  j_blok_f_n: { x: 58.0, y: 17.5 },
-  j_blok_f_w: { x: 48.5, y: 17.5 },
-  j_blok_f_e: { x: 67.5, y: 17.5 },
-
-  // Jalur Barat (COE, Kantin, Masjid, Perpus)
-  j_coe: { x: 26.0, y: 66.0 },
-  j_kantin: { x: 21.0, y: 63.0 },
-  j_masjid_e: { x: 43.0, y: 76.2 },
-  j_masjid_n: { x: 35.0, y: 69.0 },
-  j_masjid_w: { x: 25.5, y: 76.2 },
-  j_selatan_o: { x: 44.0, y: 83.0 },
-  j_bengkel_rpl: { x: 33.0, y: 83.0 },
-  j_perpus: { x: 21.0, y: 83.0 },
-  j_kantin_barat: { x: 13.0, y: 74.0 },
-  j_blok_m: { x: 12.0, y: 84.0 }
-};
-
-// Hubungan jalur (Edges antar node jalan)
-const corridorEdges = [
-  ["gate", "pos"],
-  ["pos", "j_taman_n"],
-  ["j_taman_n", "j_taman_s"],
-  ["j_taman_n", "j_blok_d_s"],
-  ["j_blok_d_s", "j_blok_d_m"],
-  ["j_blok_d_m", "j_blok_d_n"],
-  ["j_blok_d_n", "j_blok_d_far"],
-  ["j_taman_n", "j_tgm"],
-  ["j_tgm", "j_kepsek"],
-  ["j_kepsek", "j_mesin_e"],
-  ["j_taman_n", "j_parkir_guru"],
-  ["j_parkir_guru", "j_blok_a_s"],
-  ["j_blok_a_s", "j_blok_a_m"],
-  ["j_blok_a_m", "j_blok_a_n"],
-  ["j_blok_a_n", "j_tengah_n"],
-  ["j_blok_d_n", "j_blok_a_n"],
-  ["j_mesin_e", "j_pmr"],
-  ["j_pmr", "j_tengah_s"],
-  ["j_mesin_e", "j_mesin_w"],
-  ["j_mesin_w", "j_selatan_o"],
-  ["j_selatan_o", "j_bengkel_rpl"],
-  ["j_bengkel_rpl", "j_perpus"],
-  ["j_perpus", "j_blok_m"],
-  ["j_tengah_s", "j_lapangan_c"],
-  ["j_lapangan_c", "j_tengah_n"],
-  ["j_tengah_s", "j_lapangan_sw"],
-  ["j_lapangan_sw", "j_lapangan_w"],
-  ["j_lapangan_w", "j_gsg_w"],
-  ["j_lapangan_sw", "j_coe"],
-  ["j_coe", "j_kantin"],
-  ["j_coe", "j_masjid_n"],
-  ["j_mesin_w", "j_masjid_e"],
-  ["j_masjid_e", "j_masjid_n"],
-  ["j_masjid_e", "j_masjid_w"],
-  ["j_masjid_w", "j_kantin_barat"],
-  ["j_masjid_w", "j_perpus"],
-  ["j_tengah_n", "j_gsg_e"],
-  ["j_gsg_e", "j_otomotif"],
-  ["j_otomotif", "j_blok_f_s"],
-  ["j_blok_f_s", "j_blok_f_n"],
-  ["j_blok_f_n", "j_blok_f_w"],
-  ["j_blok_f_n", "j_blok_f_e"],
-  ["j_tengah_n", "j_gsg_w"],
-  ["j_gsg_w", "j_blok_g"]
-];
-
-// Jarak metrik perkiraan (SMKN 1 Cilegon sekitar 160m lebar x 240m panjang)
-function metricDistance(p1, p2) {
-  const dx = (p2.x - p1.x) * 1.6;
-  const dy = (p2.y - p1.y) * 2.4;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-// Menemukan node terdekat dalam graf
+// Menemukan node koridor terdekat
 function findNearestNode(point) {
   let nearest = null;
   let minDist = Infinity;
@@ -1262,98 +1286,105 @@ function findNearestNode(point) {
   return nearest;
 }
 
-// Algoritma Dijkstra mencari rute tercepat melewati koridor sekolah
-function findWalkingRoute(startPoint, endPoint) {
+// Algoritma Dijkstra mencari rute tercepat koridor
+function findWalkingRoute(startPoint, destinationPlace) {
+  // Jika pengguna sudah berada di lokasi tujuan
+  if (metricDistance(startPoint, destinationPlace) < 2) {
+    return [
+      { x: startPoint.x, y: startPoint.y, name: "Posisi Anda" },
+      { x: destinationPlace.x, y: destinationPlace.y, name: destinationPlace.name }
+    ];
+  }
+
   const startNode = findNearestNode(startPoint);
-  const endNode = findNearestNode(endPoint);
+  // Gunakan pintu koridor resmi ruangan jika tersedia
+  const endNode = (destinationPlace && destinationPlace.doorNode && waypoints[destinationPlace.doorNode])
+    ? destinationPlace.doorNode
+    : findNearestNode(destinationPlace);
 
   if (!startNode || !endNode) {
-    return [startPoint, endPoint];
+    return [startPoint, destinationPlace];
   }
 
-  // Bangun graph adjacency
-  const graph = {};
-  for (const id of Object.keys(waypoints)) {
-    graph[id] = [];
+  const dist = {};
+  const prev = {};
+  const q = new Set(Object.keys(waypoints));
+
+  for (const id of q) {
+    dist[id] = Infinity;
+    prev[id] = null;
   }
+  dist[startNode] = 0;
+
+  const adj = {};
+  for (const id of Object.keys(waypoints)) adj[id] = [];
   for (const [u, v] of corridorEdges) {
     if (waypoints[u] && waypoints[v]) {
-      const weight = metricDistance(waypoints[u], waypoints[v]);
-      graph[u].push({ node: v, weight });
-      graph[v].push({ node: u, weight });
+      const w = metricDistance(waypoints[u], waypoints[v]);
+      adj[u].push({ node: v, w });
+      adj[v].push({ node: u, w });
     }
   }
 
-  // Dijkstra
-  const distances = {};
-  const previous = {};
-  const pq = new Set(Object.keys(waypoints));
-
-  for (const id of Object.keys(waypoints)) {
-    distances[id] = Infinity;
-    previous[id] = null;
-  }
-  distances[startNode] = 0;
-
-  while (pq.size > 0) {
-    let closestNode = null;
-    let shortest = Infinity;
-    for (const node of pq) {
-      if (distances[node] < shortest) {
-        shortest = distances[node];
-        closestNode = node;
+  while (q.size > 0) {
+    let u = null;
+    let minD = Infinity;
+    for (const node of q) {
+      if (dist[node] < minD) {
+        minD = dist[node];
+        u = node;
       }
     }
+    if (u === null || u === endNode) break;
+    q.delete(u);
 
-    if (closestNode === null || closestNode === endNode) break;
-    pq.delete(closestNode);
-
-    for (const neighbor of graph[closestNode]) {
-      if (pq.has(neighbor.node)) {
-        const alt = distances[closestNode] + neighbor.weight;
-        if (alt < distances[neighbor.node]) {
-          distances[neighbor.node] = alt;
-          previous[neighbor.node] = closestNode;
+    for (const edge of adj[u]) {
+      if (q.has(edge.node)) {
+        const alt = dist[u] + edge.w;
+        if (alt < dist[edge.node]) {
+          dist[edge.node] = alt;
+          prev[edge.node] = u;
         }
       }
     }
   }
 
-  // Rekonstruksi rute
   const pathNodes = [];
   let curr = endNode;
   while (curr) {
     pathNodes.unshift(curr);
-    curr = previous[curr];
+    curr = prev[curr];
   }
 
-  // Bentuk path titik koordinat
-  const fullPath = [startPoint];
+  const fullPath = [];
+  // Titik awal pengguna
+  fullPath.push({ x: startPoint.x, y: startPoint.y, name: "Posisi Awal Anda" });
   for (const id of pathNodes) {
     fullPath.push(waypoints[id]);
   }
-  fullPath.push(endPoint);
+  // Titik tujuan ruangan jika berbeda dari pintu
+  if (destinationPlace && (metricDistance(waypoints[endNode], destinationPlace) > 1.2)) {
+    fullPath.push({ x: destinationPlace.x, y: destinationPlace.y, name: destinationPlace.name });
+  }
 
-  // Bersihkan titik ganda yang sangat berdekatan
+  // Bersihkan titik berulang
   const cleanPath = [fullPath[0]];
   for (let i = 1; i < fullPath.length; i++) {
-    const prev = cleanPath[cleanPath.length - 1];
-    const currPt = fullPath[i];
-    if (metricDistance(prev, currPt) > 1.5) {
-      cleanPath.push(currPt);
+    if (metricDistance(cleanPath[cleanPath.length - 1], fullPath[i]) > 1.5) {
+      cleanPath.push(fullPath[i]);
     }
   }
 
   return cleanPath;
 }
 
-// Konversi path array [{x, y}] menjadi SVG path data string
+// Konversi rute ke data SVG
 function pathToSvgD(path) {
   if (!path || path.length < 2) return "";
   return path.map((pt, i) => `${i === 0 ? "M" : "L"} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`).join(" ");
 }
 
-// Menghitung panjang total rute dalam meter
+// Hitung panjang rute total dalam meter
 function calculateTotalDistance(path) {
   let total = 0;
   for (let i = 0; i < path.length - 1; i++) {
@@ -1363,34 +1394,171 @@ function calculateTotalDistance(path) {
 }
 
 // ==========================================
-// 3. STATE APLIKASI
+// 4. GENERATOR PETUNJUK ARAH (TURN-BY-TURN KONSOLIDASI GOOGLE MAPS)
+// ==========================================
+function generateStepInstructions(path, destinationName) {
+  if (!path || path.length < 2) {
+    return [{
+      stepIndex: 0,
+      text: `Anda sudah berada tepat di lokasi: ${destinationName}`,
+      distance: 0,
+      icon: "arrival",
+      point: path && path[0] ? path[0] : { x: 0, y: 0 },
+      startSegmentIndex: 0,
+      endSegmentIndex: 0
+    }];
+  }
+
+  // 1. Ekstrak segmen mentah
+  const rawSegments = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const p1 = path[i];
+    const p2 = path[i + 1];
+    const dist = Math.max(2, Math.round(metricDistance(p1, p2)));
+    const dx = (p2.x - p1.x) * SCALE_X;
+    const dy = (p2.y - p1.y) * SCALE_Y;
+    let bearing = Math.atan2(dx, -dy) * (180 / Math.PI);
+    if (bearing < 0) bearing += 360;
+
+    rawSegments.push({
+      from: p1,
+      to: p2,
+      dist,
+      bearing,
+      name: p2.name || "",
+      pathIndex: i
+    });
+  }
+
+  // 2. Gabungkan segmen lurus searah (Step Consolidation)
+  // Menghindari instruksi berulang yang bikin pusing (misal: "lurus 10m, lurus 12m, lurus 10m")
+  const consolidated = [];
+  let curr = {
+    from: rawSegments[0].from,
+    to: rawSegments[0].to,
+    dist: rawSegments[0].dist,
+    bearing: rawSegments[0].bearing,
+    name: rawSegments[0].name,
+    startSegmentIndex: 0,
+    endSegmentIndex: 0
+  };
+
+  for (let i = 1; i < rawSegments.length; i++) {
+    const next = rawSegments[i];
+    let angleDiff = next.bearing - curr.bearing;
+    if (angleDiff > 180) angleDiff -= 360;
+    if (angleDiff < -180) angleDiff += 360;
+
+    // Jika perubahan arah < 28 derajat, gabungkan menjadi satu tarikan koridor lurus
+    if (Math.abs(angleDiff) <= 28) {
+      curr.dist += next.dist;
+      curr.to = next.to;
+      curr.name = next.name;
+      curr.bearing = next.bearing;
+      curr.endSegmentIndex = i;
+    } else {
+      consolidated.push(curr);
+      curr = {
+        from: next.from,
+        to: next.to,
+        dist: next.dist,
+        bearing: next.bearing,
+        name: next.name,
+        startSegmentIndex: i,
+        endSegmentIndex: i
+      };
+    }
+  }
+  consolidated.push(curr);
+
+  // 3. Susun instruksi bahasa manusia yang alami
+  const instructions = [];
+  for (let i = 0; i < consolidated.length; i++) {
+    const seg = consolidated[i];
+    let icon = "straight";
+    let text = "";
+
+    if (i === 0) {
+      icon = "straight";
+      if (seg.name) {
+        text = `Mulai berjalan lurus ke arah ${seg.name} sejauh ${seg.dist} meter`;
+      } else {
+        text = `Mulai berjalan lurus sejauh ${seg.dist} meter`;
+      }
+    } else {
+      const prevSeg = consolidated[i - 1];
+      let turnAngle = seg.bearing - prevSeg.bearing;
+      if (turnAngle > 180) turnAngle -= 360;
+      if (turnAngle < -180) turnAngle += 360;
+
+      const targetLandmark = seg.name ? ` menuju ${seg.name}` : "";
+
+      if (Math.abs(turnAngle) < 28) {
+        icon = "straight";
+        text = `Lurus terus${targetLandmark} sejauh ${seg.dist} meter`;
+      } else if (turnAngle >= 28 && turnAngle <= 135) {
+        icon = "turn-right";
+        text = `Belok kanan${targetLandmark}, lanjutkan jalan ${seg.dist} meter`;
+      } else if (turnAngle <= -28 && turnAngle >= -135) {
+        icon = "turn-left";
+        text = `Belok kiri${targetLandmark}, lanjutkan jalan ${seg.dist} meter`;
+      } else {
+        icon = "u-turn";
+        text = `Putar arah${targetLandmark}, lanjutkan ${seg.dist} meter`;
+      }
+    }
+
+    instructions.push({
+      stepIndex: i,
+      text,
+      distance: seg.dist,
+      icon,
+      point: seg.to,
+      startSegmentIndex: seg.startSegmentIndex,
+      endSegmentIndex: seg.endSegmentIndex
+    });
+  }
+
+  // Langkah akhir (Tiba)
+  instructions.push({
+    stepIndex: instructions.length,
+    text: `Tiba di tujuan: ${destinationName} (pintu berada di dekat Anda)`,
+    distance: 0,
+    icon: "arrival",
+    point: path[path.length - 1],
+    startSegmentIndex: rawSegments.length,
+    endSegmentIndex: rawSegments.length
+  });
+
+  return instructions;
+}
+
+// ==========================================
+// 5. STATE APLIKASI
 // ==========================================
 let activeCategory = "Semua";
 let activeRole = "Murid Baru";
 let selectedPlace = null;
 let currentRoute = [];
-let routeProgressIndex = 0;
+let routeInstructions = [];
+let currentStepIndex = 0;
 
-// Posisi pengguna saat ini di peta
 let userPosition = { ...schoolEntrance };
 let isGpsActive = false;
 let watchId = null;
 let isSimulating = false;
 let simulationInterval = null;
 
-// Zoom & Pan state
 let mapScale = 1;
 let mapTranslate = { x: 0, y: 0 };
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
 let showAllRoomLabels = false;
 
-// Audio context untuk chime sampai tujuan
 let audioCtx = null;
+let toastTimer = null;
 
-// ==========================================
-// 4. ELEMEN DOM
-// ==========================================
+// DOM Elements
 const placeList = document.getElementById("placeList");
 const searchInput = document.getElementById("placeSearch");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
@@ -1402,12 +1570,11 @@ const toast = document.getElementById("toast");
 const allLabelsWrap = document.getElementById("allLabelsWrap");
 const routePath = document.getElementById("routePath");
 const routeOutline = document.getElementById("routeOutline");
-const routeArrow = document.getElementById("routeArrow");
-
-let toastTimer = null;
+const directionsDrawer = document.getElementById("directionsDrawer");
+const directionsList = document.getElementById("directionsList");
 
 // ==========================================
-// 5. FUNGSI UI & INTERAKSI
+// 6. UI & NOTIFIKASI
 // ==========================================
 function showToast(message, duration = 3000) {
   toast.textContent = message;
@@ -1416,7 +1583,6 @@ function showToast(message, duration = 3000) {
   toastTimer = window.setTimeout(() => toast.classList.remove("show"), duration);
 }
 
-// Play notification sound saat tiba di tujuan
 function playArrivalChime() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1430,12 +1596,12 @@ function playArrivalChime() {
     const gainNode = audioCtx.createGain();
 
     osc1.type = "sine";
-    osc1.frequency.setValueAtTime(523.25, now); // C5
-    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.15); // E5
+    osc1.frequency.setValueAtTime(523.25, now);
+    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.15);
 
     osc2.type = "sine";
-    osc2.frequency.setValueAtTime(783.99, now + 0.18); // G5
-    osc2.frequency.exponentialRampToValueAtTime(1046.50, now + 0.35); // C6
+    osc2.frequency.setValueAtTime(783.99, now + 0.18);
+    osc2.frequency.exponentialRampToValueAtTime(1046.50, now + 0.35);
 
     gainNode.gain.setValueAtTime(0.01, now);
     gainNode.gain.linearRampToValueAtTime(0.25, now + 0.05);
@@ -1454,32 +1620,26 @@ function playArrivalChime() {
       navigator.vibrate([150, 80, 200]);
     }
   } catch (e) {
-    console.warn("Audio playback not permitted yet", e);
+    console.warn("Audio chime prevented:", e);
   }
 }
 
-// Filter daftar ruangan berdasarkan pencarian dan kategori
 function getFilteredPlaces() {
   const query = searchInput.value.trim().toLocaleLowerCase("id");
   return places.filter(place => {
-    // Filter Kategori
     const matchCategory = (activeCategory === "Semua") || (place.category === activeCategory);
     if (!matchCategory) return false;
-
-    // Filter Pencarian
     if (!query) return true;
 
     const nameMatch = place.name.toLocaleLowerCase("id").includes(query);
     const detailMatch = place.detail.toLocaleLowerCase("id").includes(query);
     const blockMatch = place.block.toLocaleLowerCase("id").includes(query);
-    const floorMatch = place.floor.toLocaleLowerCase("id").includes(query);
     const aliasMatch = place.aliases && place.aliases.some(a => a.toLocaleLowerCase("id").includes(query));
 
-    return nameMatch || detailMatch || blockMatch || floorMatch || aliasMatch;
+    return nameMatch || detailMatch || blockMatch || aliasMatch;
   });
 }
 
-// Render daftar tempat di sidebar
 function renderPlaceList() {
   const results = getFilteredPlaces();
   const resultCountEl = document.getElementById("resultCount");
@@ -1523,14 +1683,11 @@ function renderPlaceList() {
   placeList.querySelectorAll(".place-item").forEach(button => {
     button.addEventListener("click", () => {
       const target = places.find(p => p.id === button.dataset.id);
-      if (target) {
-        selectPlace(target, true);
-      }
+      if (target) selectPlace(target, true);
     });
   });
 }
 
-// Render semua label ruangan di denah
 function renderAllRoomLabels() {
   if (!allLabelsWrap) return;
   allLabelsWrap.innerHTML = places.map(p => `
@@ -1549,8 +1706,7 @@ function renderAllRoomLabels() {
   });
 }
 
-// Perbarui posisi titik "Anda di sini" di peta
-function updateUserMarkerPosition(x, y, heading = 0) {
+function updateUserMarkerPosition(x, y, heading = 0, accuracy = null) {
   userPosition.x = x;
   userPosition.y = y;
 
@@ -1565,17 +1721,61 @@ function updateUserMarkerPosition(x, y, heading = 0) {
     }
   }
 
-  // Jika sedang menavigasi ke tujuan, perbarui sisa jarak dan rute
-  if (selectedPlace) {
+  // Visualisasi radius lingkaran akurasi GPS (Google Maps accuracy halo)
+  const accCircle = document.getElementById("userAccuracyCircle");
+  if (accCircle) {
+    if (accuracy && accuracy > 0 && accuracy < 80) {
+      const radiusXPercent = (accuracy / SCALE_X);
+      const radiusYPercent = (accuracy / SCALE_Y);
+      accCircle.style.display = "block";
+      accCircle.style.left = `${x}%`;
+      accCircle.style.top = `${y}%`;
+      accCircle.style.width = `${Math.max(16, radiusXPercent * 2)}%`;
+      accCircle.style.height = `${Math.max(16, radiusYPercent * 2)}%`;
+    } else {
+      accCircle.style.display = "none";
+    }
+  }
+
+  if (selectedPlace && !isSimulating) {
     updateNavigationStatus();
   }
 }
 
-// Pilih lokasi tujuan dan gambar rute
+// Render panel petunjuk arah langkah demi langkah
+function renderDirectionsList() {
+  if (!directionsList) return;
+  if (!routeInstructions.length) {
+    directionsList.innerHTML = `<div class="directions-empty">Pilih ruangan tujuan untuk melihat panduan langkah arah.</div>`;
+    return;
+  }
+
+  const iconSvgs = {
+    "straight": '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    "turn-right": '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 19v-7a3 3 0 0 1 3-3h7m-4-4 4 4-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    "turn-left": '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M15 19v-7a3 3 0 0 0-3-3H5m4-4-4 4 4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    "u-turn": '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M19 19V9a6 6 0 0 0-12 0v10m4-4-4 4-4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    "arrival": '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  directionsList.innerHTML = routeInstructions.map((step, idx) => {
+    const isCurrent = (idx === currentStepIndex);
+    const isDone = (idx < currentStepIndex);
+    return `
+      <div class="direction-step-item${isCurrent ? " current" : ""}${isDone ? " done" : ""}">
+        <div class="step-num-icon">${iconSvgs[step.icon] || iconSvgs.straight}</div>
+        <div class="step-details">
+          <div class="step-text">${step.text}</div>
+          ${step.distance > 0 ? `<div class="step-dist">${step.distance} meter</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 function selectPlace(place, autoRoute = true) {
   selectedPlace = place;
 
-  // Tampilkan Pin Tujuan
   if (mapPin) {
     mapPin.hidden = false;
     mapPin.style.display = "flex";
@@ -1586,12 +1786,11 @@ function selectPlace(place, autoRoute = true) {
     document.getElementById("pinFloorBadge").textContent = place.floor;
   }
 
-  // Perbarui Kartu Tujuan di Bawah
   document.getElementById("destinationTitle").textContent = place.name;
   document.getElementById("destinationMeta").textContent = `${place.block} · ${place.floor} · ${place.detail}`;
   document.getElementById("infoButton").style.display = "inline-flex";
+  document.getElementById("toggleDirectionsBtn").style.display = "inline-flex";
 
-  // Perbarui daftar terpilih
   renderPlaceList();
 
   if (autoRoute) {
@@ -1599,7 +1798,6 @@ function selectPlace(place, autoRoute = true) {
   }
 }
 
-// Hitung rute dari posisi pengguna ke tujuan dan render SVG
 function generateAndDrawRoute() {
   if (!selectedPlace) return;
 
@@ -1609,19 +1807,21 @@ function generateAndDrawRoute() {
   routePath.setAttribute("d", pathD);
   routeOutline.setAttribute("d", pathD);
 
-  // Hitung metrik jarak & waktu jalan
-  const distMeter = Math.round(calculateTotalDistance(currentRoute));
-  const walkingMinutes = Math.max(1, Math.ceil(distMeter / 75)); // Kecepatan jalan ~75 meter/menit
+  const totalDistMeter = Math.round(calculateTotalDistance(currentRoute));
+  const walkingMinutes = Math.max(1, Math.ceil(totalDistMeter / 75));
 
-  document.getElementById("distanceValue").textContent = `${distMeter} m`;
+  document.getElementById("distanceValue").textContent = `${totalDistMeter} m`;
   document.getElementById("timeValue").textContent = `± ${walkingMinutes} mnt`;
 
-  const navControlWrap = document.getElementById("navControlWrap");
-  if (navControlWrap) {
-    navControlWrap.style.display = "flex";
-  }
+  // Hasilkan instruksi langkah arah akurat
+  routeInstructions = generateStepInstructions(currentRoute, selectedPlace.name);
+  currentStepIndex = 0;
+  renderDirectionsList();
+  if (directionsDrawer) directionsDrawer.classList.add("open");
 
-  // Set teks tombol simulasi
+  const navControlWrap = document.getElementById("navControlWrap");
+  if (navControlWrap) navControlWrap.style.display = "flex";
+
   const simBtn = document.getElementById("simWalkButton");
   if (simBtn) {
     simBtn.innerHTML = `
@@ -1630,38 +1830,42 @@ function generateAndDrawRoute() {
     `;
   }
 
-  showToast(`Rute ke ${selectedPlace.name} berhasil dimuat (${distMeter} meter).`);
+  showToast(`Rute ke ${selectedPlace.name}: ${totalDistMeter} m (${walkingMinutes} mnt jalan kaki).`);
 }
 
-// Update sisa jarak selama pengguna bergerak dan deteksi tiba di tujuan
 function updateNavigationStatus() {
-  if (!selectedPlace || !currentRoute.length) return;
+  if (!selectedPlace) return;
 
-  // Hitung jarak langsung dari posisi pengguna sekarang ke tujuan
   const directDist = metricDistance(userPosition, selectedPlace);
 
-  // Cek apakah sudah sampai (radius toleransi <= 8 meter)
-  if (directDist <= 8.5) {
+  if (directDist <= 6.5) {
     onArrivalAtDestination();
     return;
   }
 
-  // Jika masih menavigasi, hitung sisa jarak via waypoint
-  const remainingDist = Math.round(directDist);
-  document.getElementById("distanceValue").textContent = `${remainingDist} m`;
-  const remainingMinutes = Math.max(1, Math.ceil(remainingDist / 75));
+  // Hitung ulang rute koridor terpendek dari posisi user saat ini
+  const activeRoute = findWalkingRoute(userPosition, selectedPlace);
+  const remainingMeters = Math.max(0, Math.round(calculateTotalDistance(activeRoute)));
+
+  document.getElementById("distanceValue").textContent = `${remainingMeters} m`;
+  const remainingMinutes = Math.max(1, Math.ceil(remainingMeters / 75));
   document.getElementById("timeValue").textContent = `± ${remainingMinutes} mnt`;
+
+  // Perbarui garis rute di denah
+  const pathD = pathToSvgD(activeRoute);
+  routePath.setAttribute("d", pathD);
+  routeOutline.setAttribute("d", pathD);
 }
 
-// Notifikasi Tiba di Tujuan (Step 7 Algoritma)
 function onArrivalAtDestination() {
   if (isSimulating) {
     stopWalkingSimulation();
   }
 
   playArrivalChime();
+  currentStepIndex = routeInstructions.length - 1;
+  renderDirectionsList();
 
-  // Buka Modal Sukses Sampai
   const arrivalModal = document.getElementById("arrivalModal");
   if (arrivalModal && selectedPlace) {
     document.getElementById("arrivalRoomName").textContent = selectedPlace.name;
@@ -1671,14 +1875,12 @@ function onArrivalAtDestination() {
   }
 
   showToast(`🎉 Anda telah sampai di ${selectedPlace.name}!`, 4500);
-
-  // Reset rute setelah sampai
   document.getElementById("distanceValue").textContent = "0 m";
   document.getElementById("timeValue").textContent = "Sampai";
 }
 
 // ==========================================
-// 6. SIMULASI JALAN (WALKING SIMULATION)
+// 7. SIMULASI JALAN BERTAHAP
 // ==========================================
 function startWalkingSimulation() {
   if (!selectedPlace || currentRoute.length < 2) {
@@ -1687,24 +1889,21 @@ function startWalkingSimulation() {
   }
 
   isSimulating = true;
-  routeProgressIndex = 0;
-
   const simBtn = document.getElementById("simWalkButton");
   if (simBtn) {
     simBtn.classList.add("active");
     simBtn.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/></svg>
-      <span>Jeda Simulasi</span>
+      <span>Jeda</span>
     `;
   }
 
   showToast("Simulasi navigasi berjalan aktif...");
 
-  // Interpolasi titik-titik rute dengan kecepatan halus
   const waypointsToWalk = [...currentRoute];
   let currentSegment = 0;
   let segmentProgress = 0;
-  const stepRate = 0.05; // Kecepatan gerak per tick
+  const stepRate = 0.045;
 
   window.clearInterval(simulationInterval);
   simulationInterval = window.setInterval(() => {
@@ -1722,23 +1921,44 @@ function startWalkingSimulation() {
     if (segmentProgress >= 1) {
       segmentProgress = 0;
       currentSegment++;
+      // Sinkronisasi langkah instruksi konsolidasi
+      const activeIdx = routeInstructions.findIndex(inst => currentSegment <= inst.endSegmentIndex);
+      if (activeIdx !== -1 && activeIdx !== currentStepIndex) {
+        currentStepIndex = activeIdx;
+        renderDirectionsList();
+      }
     }
 
     const curX = pA.x + (pB.x - pA.x) * segmentProgress;
     const curY = pA.y + (pB.y - pA.y) * segmentProgress;
 
-    // Hitung sudut rotasi arah hadap
     const angleRad = Math.atan2(pB.y - pA.y, pB.x - pA.x);
     const angleDeg = (angleRad * 180 / Math.PI) + 90;
 
-    updateUserMarkerPosition(curX, curY, angleDeg);
+    userPosition.x = curX;
+    userPosition.y = curY;
+    if (userPin) {
+      userPin.hidden = false;
+      userPin.style.display = "flex";
+      userPin.style.left = `${curX}%`;
+      userPin.style.top = `${curY}%`;
+      const headingEl = document.getElementById("userHeadingArrow");
+      if (headingEl) {
+        headingEl.style.transform = `rotate(${angleDeg}deg)`;
+      }
+    }
 
-    // Potong rute SVG sesuai posisi sekarang
+    // HITUNG SISA JARAK JALUR ASLI (SECARA REAL-TIME & SMOOTH)
     const remainingPath = [{ x: curX, y: curY }, ...waypointsToWalk.slice(currentSegment + 1)];
+    const remainingMeter = Math.max(0, Math.round(calculateTotalDistance(remainingPath)));
+    document.getElementById("distanceValue").textContent = `${remainingMeter} m`;
+    const remainingMinutes = Math.max(1, Math.ceil(remainingMeter / 75));
+    document.getElementById("timeValue").textContent = `± ${remainingMinutes} mnt`;
+
     const pathD = pathToSvgD(remainingPath);
     routePath.setAttribute("d", pathD);
     routeOutline.setAttribute("d", pathD);
-  }, 65);
+  }, 60);
 }
 
 function stopWalkingSimulation() {
@@ -1757,38 +1977,31 @@ function stopWalkingSimulation() {
 }
 
 // ==========================================
-// 7. SISTEM GPS GEOLOCATION NYATA
+// 8. GPS GEOLOCATION NYATA (WGS84 PROJECTION)
 // ==========================================
-// Proyeksikan koordinat GPS WGS84 ke persentase denah sekolah
 function gpsToMapCoords(lat, lng) {
   const latRatio = (GPS_BOUNDS.north - lat) / (GPS_BOUNDS.north - GPS_BOUNDS.south);
   const lngRatio = (lng - GPS_BOUNDS.west) / (GPS_BOUNDS.east - GPS_BOUNDS.west);
 
   const x = Math.max(5, Math.min(95, lngRatio * 100));
   const y = Math.max(5, Math.min(95, latRatio * 100));
-
   return { x, y };
 }
 
-// Hitung jarak haversine antara dua koordinat GPS (meter)
 function haversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Radius bumi dalam meter
+  const R = 6371e3;
   const φ1 = lat1 * Math.PI / 180;
   const φ2 = lat2 * Math.PI / 180;
   const Δφ = (lat2 - lat1) * Math.PI / 180;
   const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function toggleGpsTracking() {
   if (!("geolocation" in navigator)) {
-    showToast("Perangkat Anda tidak mendukung layanan Geolocation.");
+    showToast("Perangkat Anda tidak mendukung geolokasi.");
     return;
   }
 
@@ -1803,11 +2016,13 @@ function toggleGpsTracking() {
     statusEl.textContent = "GPS tidak aktif";
     pulseEl.style.background = "#2a9b67";
     locateBtn.classList.remove("active");
+    const accCircle = document.getElementById("userAccuracyCircle");
+    if (accCircle) accCircle.style.display = "none";
     showToast("Pelacakan GPS dihentikan.");
     return;
   }
 
-  statusEl.textContent = "Mencari sinyal GPS...";
+  statusEl.textContent = "Mencari GPS...";
   locateBtn.classList.add("loading");
 
   watchId = navigator.geolocation.watchPosition(
@@ -1821,20 +2036,34 @@ function toggleGpsTracking() {
       const lng = position.coords.longitude;
       const accuracy = Math.round(position.coords.accuracy);
 
-      // Hitung jarak ke gerbang SMKN 1 Cilegon
       const distToSchool = haversineDistance(lat, lng, SCHOOL_COORDINATES.lat, SCHOOL_COORDINATES.lng);
 
-      if (distToSchool <= 450) {
-        // Berada di dalam lingkungan sekolah!
-        const projected = gpsToMapCoords(lat, lng);
-        statusEl.textContent = `Akurasi ±${accuracy}m · Di Area Sekolah`;
-        updateUserMarkerPosition(projected.x, projected.y);
+      if (distToSchool <= 500) {
+        let projected = gpsToMapCoords(lat, lng);
+        
+        // Smart Corridor Snapping: jika dekat dengan jalan koridor, kunci ke jalan agar tidak menabrak dinding
+        const nearestNodeId = findNearestNode(projected);
+        if (nearestNodeId && waypoints[nearestNodeId]) {
+          const nearestPt = waypoints[nearestNodeId];
+          const distToCorridor = metricDistance(projected, nearestPt);
+          if (distToCorridor <= 5.5) {
+            projected = { x: nearestPt.x, y: nearestPt.y };
+          }
+        }
+
+        const accuracyLabel = accuracy <= 10 ? `Sangat Akurat (±${accuracy}m)` : `±${accuracy}m`;
+        statusEl.textContent = `GPS: ${accuracyLabel}`;
+        
+        // Gunakan heading dari sensor GPS jika tersedia
+        const headingDeg = (position.coords.heading !== null && !isNaN(position.coords.heading))
+          ? position.coords.heading
+          : 0;
+
+        updateUserMarkerPosition(projected.x, projected.y, headingDeg, accuracy);
       } else {
-        // Berada di luar lingkungan sekolah
         const km = (distToSchool / 1000).toFixed(1);
-        statusEl.textContent = `${km} km dari sekolah (Simulasi Gerbang)`;
-        // Tetap pasang posisi di gerbang untuk kemudahan uji coba
-        updateUserMarkerPosition(schoolEntrance.x, schoolEntrance.y);
+        statusEl.textContent = `${km} km dari sekolah (Mode Gerbang)`;
+        updateUserMarkerPosition(schoolEntrance.x, schoolEntrance.y, 0, null);
       }
     },
     error => {
@@ -1843,20 +2072,29 @@ function toggleGpsTracking() {
       isGpsActive = false;
       watchId = null;
       statusEl.textContent = "Izin lokasi diperlukan";
-
-      const errorMsg = {
-        1: "Izin akses lokasi ditolak. Silakan izinkan lokasi di browser.",
-        2: "Sinyal GPS tidak tersedia saat ini.",
-        3: "Waktu permintaan lokasi habis."
-      };
-      showToast(errorMsg[error.code] || "Gagal mengambil lokasi GPS.");
+      showToast("Gagal membaca GPS. Aktifkan izin lokasi pada browser.");
     },
-    { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
   );
+
+  // Pasang kompas sensor putar perangkat jika tersedia di smartphone
+  if (window.DeviceOrientationEvent && !window._compassBound) {
+    window._compassBound = true;
+    window.addEventListener("deviceorientation", (event) => {
+      if (isGpsActive && event.alpha !== null) {
+        // alpha adalah derajat kompas magnetik 0 - 360
+        const compassHeading = 360 - event.alpha;
+        const headingEl = document.getElementById("userHeadingArrow");
+        if (headingEl) {
+          headingEl.style.transform = `rotate(${compassHeading.toFixed(0)}deg)`;
+        }
+      }
+    }, true);
+  }
 }
 
 // ==========================================
-// 8. KONTROL ZOOM, PAN & TRANSFORM PETA
+// 9. ZOOM & PAN ENGINE
 // ==========================================
 function updateMapTransform() {
   if (mapWrap) {
@@ -1876,7 +2114,6 @@ function resetMapFit() {
   showToast("Tampilan peta diatur ulang.");
 }
 
-// Setup Event Drag / Pan pada Map Viewport
 function setupMapPanAndZoom() {
   if (!mapViewport) return;
 
@@ -1899,7 +2136,7 @@ function setupMapPanAndZoom() {
     mapViewport.style.cursor = "grab";
   });
 
-  // Touch support untuk HP
+  // Touch pan & pinch zoom
   let touchStartDist = 0;
   mapViewport.addEventListener("touchstart", (e) => {
     if (e.touches.length === 1) {
@@ -1907,9 +2144,7 @@ function setupMapPanAndZoom() {
       panStart = { x: e.touches[0].clientX - mapTranslate.x, y: e.touches[0].clientY - mapTranslate.y };
     } else if (e.touches.length === 2) {
       isPanning = false;
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      touchStartDist = Math.hypot(dx, dy);
+      touchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     }
   }, { passive: true });
 
@@ -1919,9 +2154,7 @@ function setupMapPanAndZoom() {
       mapTranslate.y = e.touches[0].clientY - panStart.y;
       updateMapTransform();
     } else if (e.touches.length === 2) {
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const newDist = Math.hypot(dx, dy);
+      const newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
       if (touchStartDist > 0) {
         const factor = newDist / touchStartDist;
         mapScale = Math.min(2.5, Math.max(0.75, mapScale * factor));
@@ -1936,31 +2169,15 @@ function setupMapPanAndZoom() {
     touchStartDist = 0;
   });
 
-  // Wheel zoom
   mapViewport.addEventListener("wheel", (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.12 : 0.12;
     zoomMap(delta);
   }, { passive: false });
-
-  // Klik langsung di denah untuk memindahkan "Posisi Saya" secara manual jika diinginkan
-  mapWrap.addEventListener("click", (e) => {
-    if (isPanning) return;
-    const rect = mapWrap.getBoundingClientRect();
-    const clickX = ((e.clientX - rect.left) / rect.width) * 100;
-    const clickY = ((e.clientY - rect.top) / rect.height) * 100;
-
-    // Jika pengguna mengklik dengan tombol Alt / opsi klik khusus, atau via dialog
-    if (e.shiftKey) {
-      updateUserMarkerPosition(clickX, clickY);
-      showToast("Titik lokasi Anda dipindahkan.");
-      if (selectedPlace) generateAndDrawRoute();
-    }
-  });
 }
 
 // ==========================================
-// 9. MODAL & DETAIL RUANGAN
+// 10. MODAL & DRAWER SETUP
 // ==========================================
 function openRoomDetailModal(place) {
   if (!place) return;
@@ -1979,7 +2196,6 @@ function openRoomDetailModal(place) {
     facilitiesList.innerHTML = place.facilities.map(f => `<li><span class="bullet">✓</span> ${f}</li>`).join("");
   }
 
-  // Tombol navigasi di modal
   const navBtn = document.getElementById("modalNavButton");
   if (navBtn) {
     navBtn.onclick = () => {
@@ -1991,80 +2207,65 @@ function openRoomDetailModal(place) {
   modal.classList.add("active");
 }
 
-function setupModals() {
+function setupModalsAndDrawer() {
   // Modal Ruangan
   const roomModal = document.getElementById("roomModal");
-  const closeRoomModal = document.getElementById("closeRoomModal");
-  if (closeRoomModal && roomModal) {
-    closeRoomModal.addEventListener("click", () => roomModal.classList.remove("active"));
-  }
+  document.getElementById("closeRoomModal")?.addEventListener("click", () => roomModal.classList.remove("active"));
 
-  // Modal Tentang Voc1Maps
+  // Modal Tentang
   const aboutModal = document.getElementById("aboutModal");
-  const helpBtn = document.getElementById("helpButton");
-  const closeAboutBtn = document.getElementById("closeAboutModal");
-  if (helpBtn && aboutModal) {
-    helpBtn.addEventListener("click", () => aboutModal.classList.add("active"));
-  }
-  if (closeAboutBtn && aboutModal) {
-    closeAboutBtn.addEventListener("click", () => aboutModal.classList.remove("active"));
-  }
+  document.getElementById("helpButton")?.addEventListener("click", () => aboutModal.classList.add("active"));
+  document.getElementById("closeAboutModal")?.addEventListener("click", () => aboutModal.classList.remove("active"));
 
-  // Modal Sampai di Tujuan
+  // Modal Tiba
   const arrivalModal = document.getElementById("arrivalModal");
-  const closeArrivalBtn = document.getElementById("closeArrivalModal");
-  const searchAnotherBtn = document.getElementById("searchAnotherBtn");
-  if (closeArrivalBtn && arrivalModal) {
-    closeArrivalBtn.addEventListener("click", () => arrivalModal.classList.remove("active"));
+  document.getElementById("closeArrivalModal")?.addEventListener("click", () => arrivalModal.classList.remove("active"));
+  document.getElementById("searchAnotherBtn")?.addEventListener("click", () => {
+    arrivalModal.classList.remove("active");
+    searchInput.focus();
+  });
+
+  // Drawer Petunjuk Arah
+  const toggleDirectionsBtn = document.getElementById("toggleDirectionsBtn");
+  const closeDirectionsBtn = document.getElementById("closeDirectionsBtn");
+  if (toggleDirectionsBtn && directionsDrawer) {
+    toggleDirectionsBtn.addEventListener("click", () => {
+      directionsDrawer.classList.toggle("open");
+    });
   }
-  if (searchAnotherBtn && arrivalModal) {
-    searchAnotherBtn.addEventListener("click", () => {
-      arrivalModal.classList.remove("active");
-      searchInput.focus();
+  if (closeDirectionsBtn && directionsDrawer) {
+    closeDirectionsBtn.addEventListener("click", () => {
+      directionsDrawer.classList.remove("open");
     });
   }
 
-  // Tutup modal jika klik overlay backdrop
   window.addEventListener("click", (e) => {
     if (e.target.classList.contains("modal-overlay")) {
       e.target.classList.remove("active");
     }
   });
 
-  // Tombol Info di bar tujuan
-  const infoBtn = document.getElementById("infoButton");
-  if (infoBtn) {
-    infoBtn.addEventListener("click", () => {
-      if (selectedPlace) openRoomDetailModal(selectedPlace);
-    });
-  }
+  document.getElementById("infoButton")?.addEventListener("click", () => {
+    if (selectedPlace) openRoomDetailModal(selectedPlace);
+  });
 }
 
-// ==========================================
-// 10. SETUP ROLE & REKOMENDASI PENGGUNA
-// ==========================================
 function setupRoleSelector() {
   const roleSelect = document.getElementById("userRoleSelect");
-  const roleBadge = document.getElementById("currentRoleBadge");
   const roleAvatar = document.getElementById("userAvatarIcon");
-
   if (!roleSelect) return;
 
   const roleMeta = {
-    "Murid Baru": { letter: "M", title: "Murid Baru" },
-    "Wali Murid": { letter: "W", title: "Wali Murid" },
-    "Tamu Sekolah": { letter: "T", title: "Tamu Sekolah" },
-    "Guru & Staff": { letter: "G", title: "Guru & Staff" }
+    "Murid Baru": "M",
+    "Wali Murid": "W",
+    "Tamu Sekolah": "T",
+    "Guru & Staff": "G"
   };
 
   roleSelect.addEventListener("change", (e) => {
     activeRole = e.target.value;
-    const meta = roleMeta[activeRole] || { letter: "U", title: activeRole };
-
-    if (roleBadge) roleBadge.textContent = meta.title;
-    if (roleAvatar) roleAvatar.textContent = meta.letter;
-
-    showToast(`Profil pengguna diubah ke: ${activeRole}`);
+    if (roleAvatar) roleAvatar.textContent = roleMeta[activeRole] || "U";
+    showToast(`Profil pengguna: ${activeRole}`);
   });
 }
 
@@ -2072,17 +2273,15 @@ function setupRoleSelector() {
 // 11. INISIALISASI UTAMA
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Render daftar awal
   renderPlaceList();
   renderAllRoomLabels();
   setupMapPanAndZoom();
-  setupModals();
+  setupModalsAndDrawer();
   setupRoleSelector();
 
-  // Inisialisasi posisi awal pengguna di Gerbang Utama
   updateUserMarkerPosition(schoolEntrance.x, schoolEntrance.y);
 
-  // Kategori filter chips
+  // Kategori Chips
   document.querySelectorAll(".category-chip").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelector(".category-chip.active")?.classList.remove("active");
@@ -2092,12 +2291,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Input pencarian ruangan dengan auto-search
+  // Search input
   if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      renderPlaceList();
-    });
-
+    searchInput.addEventListener("input", renderPlaceList);
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -2112,7 +2308,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Clear button pada search
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener("click", () => {
       searchInput.value = "";
@@ -2121,80 +2316,57 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Tombol GPS
-  const locateBtn = document.getElementById("locateButton");
-  if (locateBtn) {
-    locateBtn.addEventListener("click", toggleGpsTracking);
-  }
-
-  // Tombol Zoom & Reset
+  document.getElementById("locateButton")?.addEventListener("click", toggleGpsTracking);
   document.getElementById("zoomIn")?.addEventListener("click", () => zoomMap(0.15));
   document.getElementById("zoomOut")?.addEventListener("click", () => zoomMap(-0.15));
   document.getElementById("resetFit")?.addEventListener("click", resetMapFit);
 
-  // Toggle Semua Label Ruangan
-  const toggleLabelsBtn = document.getElementById("toggleLabelsBtn");
-  if (toggleLabelsBtn) {
-    toggleLabelsBtn.addEventListener("click", () => {
-      showAllRoomLabels = !showAllRoomLabels;
-      allLabelsWrap.classList.toggle("show", showAllRoomLabels);
-      toggleLabelsBtn.classList.toggle("active", showAllRoomLabels);
-      showToast(showAllRoomLabels ? "Label semua ruangan ditampilkan" : "Label ruangan disembunyikan");
-    });
-  }
+  document.getElementById("toggleLabelsBtn")?.addEventListener("click", () => {
+    showAllRoomLabels = !showAllRoomLabels;
+    allLabelsWrap.classList.toggle("show", showAllRoomLabels);
+    document.getElementById("toggleLabelsBtn").classList.toggle("active", showAllRoomLabels);
+    showToast(showAllRoomLabels ? "Label semua ruangan ditampilkan" : "Label ruangan disembunyikan");
+  });
 
-  // Tombol Rute
-  const directionBtn = document.getElementById("directionButton");
-  if (directionBtn) {
-    directionBtn.addEventListener("click", () => {
-      if (!selectedPlace) {
-        showToast("Silakan pilih ruangan tujuan pada daftar atau denah.");
-        return;
-      }
-      generateAndDrawRoute();
-    });
-  }
+  document.getElementById("directionButton")?.addEventListener("click", () => {
+    if (!selectedPlace) {
+      showToast("Silakan pilih ruangan tujuan pada daftar atau denah.");
+      return;
+    }
+    generateAndDrawRoute();
+  });
 
-  // Tombol Simulasi Berjalan
-  const simWalkBtn = document.getElementById("simWalkButton");
-  if (simWalkBtn) {
-    simWalkBtn.addEventListener("click", () => {
-      if (isSimulating) {
-        stopWalkingSimulation();
-      } else {
-        startWalkingSimulation();
-      }
-    });
-  }
+  document.getElementById("simWalkButton")?.addEventListener("click", () => {
+    if (isSimulating) {
+      stopWalkingSimulation();
+    } else {
+      startWalkingSimulation();
+    }
+  });
 
-  // Tombol Setel Posisi ke Gerbang
   document.getElementById("resetUserToGateBtn")?.addEventListener("click", () => {
-    updateUserMarkerPosition(schoolEntrance.x, schoolEntrance.y);
+    updateUserMarkerPosition(schoolEntrance.x, schoolEntrance.y, 0, null);
     showToast("Posisi Anda diatur ke Gerbang Utama.");
     if (selectedPlace) generateAndDrawRoute();
   });
 
-  // Tombol Bagikan Lokasi
-  const shareBtn = document.getElementById("shareButton");
-  if (shareBtn) {
-    shareBtn.addEventListener("click", async () => {
-      const title = "Voc1Maps — SMK Negeri 1 Cilegon";
-      const text = selectedPlace
-        ? `Temukan lokasi ${selectedPlace.name} (${selectedPlace.block}, ${selectedPlace.floor}) di SMK Negeri 1 Cilegon dengan Voc1Maps!`
-        : "Jelajahi peta interaktif & navigasi SMK Negeri 1 Cilegon dengan Voc1Maps.";
+  document.getElementById("shareButton")?.addEventListener("click", async () => {
+    const title = "Voc1Maps — SMKN 1 Cilegon";
+    const text = selectedPlace
+      ? `Lokasi ${selectedPlace.name} di SMKN 1 Cilegon (Koordinat: ${SCHOOL_COORDINATES.dms}).`
+      : `Peta navigasi SMKN 1 Cilegon (Koordinat: ${SCHOOL_COORDINATES.dms}).`;
 
-      if (navigator.share) {
-        try {
-          await navigator.share({ title, text, url: window.location.href });
-        } catch (e) {
-          if (e.name !== "AbortError") showToast("Gagal membagikan tautan.");
-        }
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-        showToast("Tautan peta disalin ke clipboard!");
-      } else {
-        showToast("Silakan bagikan URL aplikasi ini.");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url: window.location.href });
+      } catch (e) {
+        if (e.name !== "AbortError") showToast("Gagal membagikan tautan.");
       }
-    });
-  }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(`${text} ${window.location.href}`);
+      showToast("Tautan peta disalin ke clipboard!");
+    } else {
+      showToast("Silakan bagikan tautan browser ini.");
+    }
+  });
 });

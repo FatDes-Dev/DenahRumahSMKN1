@@ -676,6 +676,19 @@ h1 {
   to { stroke-dashoffset: -14; }
 }
 
+/* LINGKARAN RADIUS AKURASI GPS (ACCURACY HALO) */
+.user-accuracy-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.13);
+  border: 1.5px solid rgba(37, 99, 235, 0.45);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  transition: left .25s ease, top .25s ease, width .3s ease, height .3s ease;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.2);
+}
+
 /* TITIK "ANDA DI SINI" (USER LIVE PIN) */
 .user-live-pin {
   align-items: center;
@@ -1010,7 +1023,7 @@ h1 {
   gap: 8px;
 }
 
-.direction-button, .sim-walk-button, .info-button {
+.direction-button, .sim-walk-button, .info-button, .directions-button {
   align-items: center;
   border: 0;
   border-radius: var(--radius-sm);
@@ -1029,6 +1042,16 @@ h1 {
 }
 .direction-button:hover { background: var(--green-2); }
 
+.directions-button {
+  background: var(--mint);
+  border: 1px solid #c2dbca;
+  color: var(--green);
+}
+.directions-button:hover {
+  background: #d8ebde;
+  border-color: var(--green-2);
+}
+
 .sim-walk-button {
   background: var(--blue);
   color: #ffffff;
@@ -1046,6 +1069,131 @@ h1 {
 .info-button:hover {
   background: #e6ede5;
   color: var(--green);
+}
+
+/* ==========================================
+   DIRECTIONS DRAWER (TURN-BY-TURN PANEL)
+   ========================================== */
+.directions-drawer {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  margin-top: 10px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .3s ease, padding .3s ease, opacity .25s ease;
+  opacity: 0;
+}
+.directions-drawer.open {
+  max-height: 420px;
+  opacity: 1;
+  padding: 16px 20px 20px;
+}
+.directions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.directions-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.directions-header-icon {
+  font-size: 22px;
+}
+.directions-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.directions-subtitle {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.close-directions-btn {
+  background: #f1f4f0;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.close-directions-btn:hover {
+  background: #e2ede5;
+  color: var(--ink);
+}
+.directions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.direction-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: #f8faf7;
+  border: 1px solid #edf2ec;
+  transition: .15s ease;
+}
+.direction-step-item.current {
+  background: var(--mint);
+  border-color: #a8d5b5;
+  box-shadow: 0 2px 6px rgba(40,114,82,.12);
+}
+.direction-step-item.done {
+  opacity: 0.6;
+}
+.step-num-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  color: var(--green-2);
+  flex: 0 0 auto;
+}
+.direction-step-item.current .step-num-icon {
+  background: var(--green);
+  color: #ffffff;
+  border-color: var(--green);
+}
+.step-details {
+  flex: 1;
+}
+.step-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.step-dist {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green-2);
+  margin-top: 2px;
+}
+.directions-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* Badges */
