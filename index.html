@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#164b38">
+  <meta name="description" content="Voc1Maps — Aplikasi peta digital interaktif & navigasi real-time SMK Negeri 1 Cilegon untuk siswa baru, wali murid, guru, staf, dan tamu.">
+  <title>Voc1Maps — Peta Digital Interaktif SMKN 1 Cilegon</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOPBAR / HEADER -->
+    <header class="topbar">
+      <div class="brand">
+        <img src="Img/Logo VocMaps.jpg" alt="Logo Voc1Maps" class="brand-logo">
+        <div>
+          <div class="brand-name">Voc<span>1</span>Maps</div>
+          <div class="brand-caption">Peta Digital Interaktif SMKN 1 Cilegon</div>
+        </div>
+      </div>
+
+      <div class="top-context" title="Lokasi: SMKN 1 Cilegon (-6.04617, 106.05200)">
+        <span class="school-dot" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 20h18M5 20V8l7-4 7 4v12M9 20v-6h6v6M9 9h.01M15 9h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="school-name">SMK Negeri 1 Cilegon</span>
+      </div>
+
+      <div class="top-spacer"></div>
+
+      <!-- ROLE SELECTOR (Murid Baru, Wali Murid, Tamu Sekolah, Guru & Staff) -->
+      <div class="role-selector-wrap" title="Ganti profil pengguna">
+        <label for="userRoleSelect" class="sr-only">Peran Pengguna</label>
+        <div class="user-chip">
+          <span class="user-avatar" id="userAvatarIcon">M</span>
+          <select id="userRoleSelect" class="role-select">
+            <option value="Murid Baru" selected>Murid Baru</option>
+            <option value="Wali Murid">Wali Murid</option>
+            <option value="Tamu Sekolah">Tamu Sekolah</option>
+            <option value="Guru & Staff">Guru & Staff</option>
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" class="role-arrow"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <button class="help-link" id="helpButton" type="button" aria-label="Tentang Voc1Maps">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.8 9a2.25 2.25 0 1 1 3.9 1.5c-1 .9-1.7 1.2-1.7 2.5M12 16.5h.01" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span>Tentang</span>
+      </button>
+    </header>
+
+    <div class="workspace">
+      <!-- SIDEBAR PENCARIAN & DAFTAR RUANGAN -->
+      <aside class="sidebar">
+        <div class="side-inner">
+          <div class="eyebrow">Sistem Navigasi Sekolah</div>
+          <h1>Mau ke mana<br>hari ini?</h1>
+          <p class="intro">Temukan ruang kelas, laboratorium, bengkel, dan fasilitas sekolah secara real-time.</p>
+
+          <!-- SEARCH BAR -->
+          <div class="search-wrap">
+            <svg class="search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <label class="sr-only" for="placeSearch">Cari ruangan atau fasilitas</label>
+            <input id="placeSearch" class="search-input" type="search" placeholder="Cari misal: Kelas 10, RPL, Lab, Guru..." autocomplete="off">
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" style="display:none;" aria-label="Hapus pencarian">✕</button>
+            <span class="search-shortcut">⌕</span>
+          </div>
+
+          <!-- KATEGORI FILTER -->
+          <div class="section-heading">
+            <h2>Daftar Ruangan & Lokasi</h2>
+            <span class="result-count" id="resultCount">Memuat...</span>
+          </div>
+          <div class="category-row" role="group" aria-label="Filter kategori">
+            <button type="button" class="category-chip active" data-category="Semua">Semua</button>
+            <button type="button" class="category-chip" data-category="Ruang kelas">Ruang Kelas</button>
+            <button type="button" class="category-chip" data-category="Fasilitas">Fasilitas</button>
+            <button type="button" class="category-chip" data-category="Gedung">Bengkel & Gedung</button>
+          </div>
+
+          <!-- DAFTAR TEMPAT HASIL FILTER -->
+          <div class="place-list" id="placeList" aria-live="polite"></div>
+        </div>
+
+        <!-- FOOTER SIDEBAR / KONTROL LOKASI SAYA -->
+        <div class="sidebar-footer">
+          <div class="location-control">
+            <span class="location-pulse" aria-hidden="true"></span>
+            <div class="location-text">
+              <div class="location-title">Posisi Anda (GPS)</div>
+              <div class="location-status" id="locationStatus">Gerbang Utama SMKN 1 Cilegon</div>
+            </div>
+            <button class="locate-button" id="locateButton" type="button" title="Aktifkan pelacakan GPS perangkat" aria-label="Aktifkan lokasi GPS">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button class="reset-gate-btn" id="resetUserToGateBtn" type="button" title="Kembalikan posisi ke Gerbang Utama">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <p class="footer-note">
+            Tekan <strong>Aktifkan GPS</strong> untuk koordinat riil perangkat, atau gunakan <strong>Simulasi Jalan</strong> untuk menguji pergerakan menuju ruangan.
+          </p>
+        </div>
+      </aside>
+
+      <!-- MAIN AREA: MAP & NAVIGATION HUD -->
+      <main class="main">
+        <!-- MAP TOOLBAR -->
+        <div class="map-toolbar">
+          <div class="map-heading">
+            <h2>Denah Kompleks SMKN 1 Cilegon</h2>
+            <div class="map-subtitle">
+              <span>Koordinat: -6.04617, 106.05200</span>
+              <span aria-hidden="true">·</span>
+              <span>Jl. Kedungbaya No.21, Cibeber</span>
+            </div>
+          </div>
+          <div class="open-status"><i></i> Area Sekolah</div>
+          <div class="toolbar-divider" aria-hidden="true"></div>
+          <button type="button" class="map-action" id="shareButton" aria-label="Bagikan lokasi peta">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.7"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.7"/><path d="m8.7 10.7 6.6-4.4m-6.6 9 6.6 4" stroke="currentColor" stroke-width="1.7"/></svg>
+            <span>Bagikan</span>
+          </button>
+        </div>
+
+        <!-- INTERACTIVE MAP CARD -->
+        <section class="map-card" aria-label="Peta interaktif sekolah SMKN 1 Cilegon">
+          <div class="map-background"></div>
+          
+          <div class="map-viewport" id="mapViewport">
+            <div class="map-image-wrap" id="mapImageWrap">
+              <!-- Official School Blueprint Map -->
+              <img src="Img/Denah Ruang SMKN 1 Cilegon@2x.png" alt="Denah Lokasi dan Fasilitas SMK Negeri 1 Cilegon" draggable="false">
+
+              <!-- SVG Animated Navigation Path -->
+              <svg class="map-route" id="mapRoute" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#2563eb" />
+                    <stop offset="100%" stop-color="#16a34a" />
+                  </linearGradient>
+                </defs>
+                <path class="route-outline" id="routeOutline" d=""></path>
+                <path class="route-path" id="routePath" d=""></path>
+              </svg>
+
+              <!-- ALL LABELS LAYER (Toggleable) -->
+              <div class="all-labels-wrap" id="allLabelsWrap"></div>
+
+              <!-- TITIK "ANDA DI SINI" (USER LIVE POSITION) -->
+              <div class="user-live-pin" id="userPin" hidden>
+                <div class="user-pulse-wave"></div>
+                <div class="user-core-dot">
+                  <div class="user-heading-arrow" id="userHeadingArrow"></div>
+                </div>
+                <div class="user-pin-label">📍 Anda di Sini</div>
+              </div>
+
+              <!-- TITIK LOKASI TUJUAN (DESTINATION PIN) -->
+              <div class="map-pin" id="mapPin" hidden>
+                <div class="pin-card-popup">
+                  <span class="pin-label" id="pinLabel">Lokasi Tujuan</span>
+                  <span class="pin-floor-badge" id="pinFloorBadge">Lantai Dasar</span>
+                </div>
+                <span class="pin-dot">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                    <path d="M12 2v3m0 14v3M2 12h3m14 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMPASS NORTH INDICATOR -->
+          <div class="north-marker" title="Arah Utara Kompas">
+            <span class="north-arrow">↑</span>
+            <span>UTARA</span>
+          </div>
+
+          <!-- MAP CONTROLS -->
+          <div class="map-controls">
+            <button type="button" class="zoom-button" id="zoomIn" title="Perbesar Peta (+)" aria-label="Perbesar peta">+</button>
+            <button type="button" class="zoom-button" id="zoomOut" title="Perkecil Peta (−)" aria-label="Perkecil peta">−</button>
+            <button type="button" class="zoom-button" id="resetFit" title="Atur Ulang Tampilan Peta" aria-label="Atur ulang tampilan">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+            </button>
+            <button type="button" class="zoom-button toggle-labels-btn" id="toggleLabelsBtn" title="Tampilkan / Sembunyikan Semua Nama Ruangan" aria-label="Toggle Label Ruangan">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+          </div>
+
+          <!-- MAP LEGEND BADGE -->
+          <div class="map-badge">
+            <div class="legend-item"><span class="legend-color legend-white"></span><span>Lantai Dasar</span></div>
+            <div class="legend-item"><span class="legend-color legend-blue"></span><span>Lantai Atas</span></div>
+            <div class="legend-item"><span class="legend-color legend-road"></span><span>Jalur Jalan</span></div>
+          </div>
+        </section>
+
+        <!-- DESTINATION & NAVIGATION HUD BAR -->
+        <section class="destination-bar" aria-live="polite">
+          <div class="destination-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.3 7-12a7 7 0 1 0-14 0c0 5.7 7 12 7 12Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9" r="2.3" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <div class="destination-copy">
+            <div class="destination-label">Tujuan Terpilih</div>
+            <div class="destination-title" id="destinationTitle">Pilih Ruangan di Daftar atau Denah</div>
+            <div class="destination-meta" id="destinationMeta">Pilih ruangan untuk melihat rute jalan & informasi lengkap</div>
+          </div>
+          <div class="route-info">
+            <div class="route-stat"><strong id="distanceValue">—</strong><span>Estimasi Jarak</span></div>
+            <div class="route-stat"><strong id="timeValue">—</strong><span>Waktu Tempuh</span></div>
+          </div>
+          <div class="action-buttons-wrap">
+            <button type="button" class="info-button" id="infoButton" style="display: none;" title="Informasi & Fasilitas Ruangan">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Detail Info</span>
+            </button>
+            <button type="button" class="direction-button" id="directionButton">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.3 7-12a7 7 0 1 0-14 0c0 5.7 7 12 7 12Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9" r="2.3" stroke="currentColor" stroke-width="1.8"/></svg>
+              <span>Tampilkan Rute</span>
+            </button>
+            <div class="nav-control-wrap" id="navControlWrap" style="display: none;">
+              <button type="button" class="sim-walk-button" id="simWalkButton" title="Mulai simulasi berjalan mengikuti rute">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 4v16M6 11l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Simulasi Jalan</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- MODAL 1: DETAIL INFORMASI RUANGAN -->
+  <div class="modal-overlay" id="roomModal" role="dialog" aria-modal="true" aria-labelledby="modalRoomName">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="badge" id="modalRoomCategory">Kategori</span>
+          <span class="badge" id="modalRoomFloor">Lantai</span>
+          <h3 id="modalRoomName">Nama Ruangan</h3>
+          <p class="modal-subtitle" id="modalRoomBlock">Gedung / Blok</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeRoomModal" aria-label="Tutup modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h4>Fungsi & Deskripsi</h4>
+          <p id="modalRoomDesc">Deskripsi ruangan...</p>
+        </div>
+        <div class="modal-section">
+          <h4>Fasilitas Tersedia</h4>
+          <ul class="facilities-list" id="modalFacilitiesList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" id="modalNavButton">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="3 11 22 2 13 21 11 13 3 11" fill="currentColor"/></svg>
+          Navigasi ke Ruang Ini
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: TENTANG VOC1MAPS & ALGORITMA SISTEM -->
+  <div class="modal-overlay" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <div class="brand-row">
+          <img src="Img/Logo VocMaps.jpg" alt="Logo" class="about-logo">
+          <div>
+            <h3 id="aboutTitle">Voc1Maps — Peta Digital Sekolah</h3>
+            <p class="modal-subtitle">SMK Negeri 1 Cilegon · Solusi Navigasi Cerdas Sekolah</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeAboutModal" aria-label="Tutup modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="about-grid">
+          <div class="about-block">
+            <h4>📖 Ringkasan Aplikasi</h4>
+            <p>
+              <strong>Voc1Maps</strong> adalah aplikasi peta digital interaktif berbasis sekolah yang membantu warga sekolah (siswa baru, wali murid, tamu, hingga guru dan staf) menemukan lokasi kelas, gedung, dan fasilitas sekolah secara real-time, mirip fungsi Google Maps dalam skala kompleks sekolah.
+            </p>
+          </div>
+          <div class="about-block">
+            <h4>🎯 Tujuan Aplikasi</h4>
+            <ul>
+              <li>Memudahkan pengguna menemukan lokasi kelas, laboratorium, gedung, dan fasilitas dengan cepat.</li>
+              <li>Mengurangi kebingungan atau keterlambatan saat KBM, khususnya saat awal tahun ajaran baru atau acara sekolah (PPDB, Wisuda, Rapat Wali Murid).</li>
+              <li>Meningkatkan efisiensi mobilitas dan orientasi lingkungan sekolah.</li>
+            </ul>
+          </div>
+          <div class="about-block">
+            <h4>👥 Target Pengguna</h4>
+            <div class="tag-row">
+              <span class="user-tag">🎓 Murid Baru</span>
+              <span class="user-tag">👨‍👩‍👧 Wali Murid</span>
+              <span class="user-tag">🤝 Tamu Sekolah</span>
+              <span class="user-tag">👨‍🏫 Guru & Staf</span>
+            </div>
+          </div>
+          <div class="about-block">
+            <h4>⚡ Fitur Utama</h4>
+            <ul>
+              <li><strong>Peta Real-Time:</strong> Peta interaktif sekolah dengan zoom, drag-pan, dan titik "Anda di sini".</li>
+              <li><strong>Penandaan Tujuan:</strong> Menandai ruang yang dipilih dengan pin visual dan indikator lantai.</li>
+              <li><strong>Navigasi Jalur:</strong> Menghitung rute koridor tercepat dari gerbang / titik pengguna ke ruangan.</li>
+              <li><strong>Label & Informasi Ruangan:</strong> Menampilkan detail ruang, blok gedung, lantai, dan fasilitas.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="algorithm-section">
+          <h4>🔄 Alur Algoritma Sistem (1 - 7)</h4>
+          <ol class="algo-steps">
+            <li><strong>Mulai & Buka Aplikasi:</strong> Voc1Maps dimuat dan menampilkan denah resmi SMKN 1 Cilegon.</li>
+            <li><strong>Aktifkan GPS / Lokasi:</strong> Sistem meminta izin geolokasi perangkat pengguna.</li>
+            <li><strong>Ambil Koordinat:</strong> Sistem membaca koordinat latitude & longitude pengguna.</li>
+            <li><strong>Tampilkan Peta + Titik "Anda di Sini":</strong> Menampilkan posisi pengguna pada denah sekolah dengan sinyal radar biru.</li>
+            <li>
+              <strong>Pencarian Ruangan:</strong>
+              Pengguna mengetik nama ruangan (misal: <em>"Kelas 10 IPA 2"</em>). Jika ditemukan di database, titik ruangan dan rute ditampilkan; jika tidak ditemukan, tampilkan pesan peringatan.
+            </li>
+            <li>
+              <strong>Update Posisi Bergerak:</strong>
+              Selama pengguna berjalan, posisi pengguna di peta terus diperbarui beserta sisa jarak (meter) dan estimasi waktu tempuh.
+            </li>
+            <li>
+              <strong>Deteksi Tiba di Tujuan:</strong>
+              Jika posisi pengguna telah mencapai lokasi tujuan (radius &le; 8 meter), sistem otomatis memicu notifikasi <em>"Anda telah sampai di tujuan"</em> disertai suara konfirmasi.
+            </li>
+          </ol>
+        </div>
+
+        <div class="school-info-footer">
+          <div><strong>SMK Negeri 1 Cilegon</strong> — Jl. Kedungbaya No.21, Kalitimbang, Kec. Cibeber, Kota Cilegon, Banten</div>
+          <div class="coords-code">Koordinat Resmi: -6.046173455310091, 106.0519980548539</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: NOTIFIKASI SAMPAI DI TUJUAN (ALGORITMA 7) -->
+  <div class="modal-overlay" id="arrivalModal" role="dialog" aria-modal="true" aria-labelledby="arrivalTitle">
+    <div class="modal-card arrival-card">
+      <div class="arrival-celebration">🎉</div>
+      <h3 id="arrivalTitle">Anda Telah Sampai!</h3>
+      <div class="arrival-room-name" id="arrivalRoomName">Nama Ruangan</div>
+      <div class="arrival-room-detail" id="arrivalRoomDetail">Detail lokasi</div>
+      <p class="arrival-room-desc" id="arrivalRoomDesc">Deskripsi ruangan</p>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" id="closeArrivalModal">Selesai</button>
+        <button type="button" class="btn-secondary" id="searchAnotherBtn">Cari Ruangan Lain</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOAD APPLICATION SCRIPT -->
+  <script src="app.js"></script>
+</body>
+</html>
